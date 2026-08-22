@@ -42,6 +42,13 @@ Example client configuration after `pnpm install`:
 - `apps/mcp`: model-neutral MCP tools over that client
 - `apps/web`: Next.js officer workspace, MCP client, and Gemini/OpenAI adapters
 
-For Gemini, the Next.js backend starts an MCP client, gives Gemini the server's live tool schemas, executes Gemini's selected tools, and returns results for further tool-selection rounds. The UI shows the completed MCP call trace so an agent response is visibly distinct from evidence-only fallback output.
+For Gemini, the Next.js backend starts an MCP client, gives Gemini the server's live tool schemas, executes Gemini's selected tools, and returns results for further tool-selection rounds. The UI shows the completed MCP call trace so an agent response is visibly distinct from evidence-only fallback output. Follow-up questions carry the current research thread into a fresh evidence-verification loop, allowing references such as “those approaches” while avoiding unsupported answers from chat memory alone.
+
+The workspace offers two research depths:
+
+- **Quick** (default): up to three model/tool rounds, smaller evidence payloads, and limited full-document retrieval.
+- **Deep**: up to five rounds and broader document inspection for difficult or high-stakes questions.
+
+Independent MCP calls run in parallel, the local MCP connection is reused while the Next.js process is alive, and safe Poteris GET responses use short in-memory caches. The research route streams newline-delimited activity events so the interface can show each selected tool before the final briefing is ready.
 
 The local web agent uses MCP over stdio. For serverless deployment, host the MCP server with Streamable HTTP and point the web-side MCP client at that endpoint instead of spawning a local process.

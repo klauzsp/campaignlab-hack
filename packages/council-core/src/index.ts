@@ -109,6 +109,14 @@ export class PoterisError extends Error {
 }
 
 const DEFAULT_BASE_URL = "https://councilgateway.poteris.co.uk/council-api";
+const responseCache = new Map<string, { expiresAt: number; value: Promise<unknown> }>();
+const MAX_CACHE_ENTRIES = 400;
+
+function cacheDuration(path: string) {
+  if (path.startsWith("/councils")) return 30 * 60_000;
+  if (path.startsWith("/documents/")) return 10 * 60_000;
+  return 2 * 60_000;
+}
 
 export class PoterisClient {
   private readonly baseUrl: string;
@@ -127,15 +135,34 @@ export class PoterisClient {
       }
     });
 
-    const response = await fetch(url, {
-      headers: this.token ? { Authorization: `Bearer ${this.token}` } : undefined,
-      signal: AbortSignal.timeout(30_000),
-    });
-    if (!response.ok) {
-      const detail = await response.text();
-      throw new PoterisError(`Poteris request failed (${response.status}): ${detail.slice(0, 240)}`, response.status);
+    const cacheKey = `${this.token ? "authenticated" : "public"}:${url.toString()}`;
+    const cached = responseCache.get(cacheKey);
+    if (cached && cached.expiresAt > Date.now()) return cached.value as Promise<T>;
+    if (cached) responseCache.delete(cacheKey);
+
+    const request = (async () => {
+      const response = await fetch(url, {
+        headers: this.token ? { Authorization: `Bearer ${this.token}` } : undefined,
+        signal: AbortSignal.timeout(30_000),
+      });
+      if (!response.ok) {
+        const detail = await response.text();
+        throw new PoterisError(`Poteris request failed (${response.status}): ${detail.slice(0, 240)}`, response.status);
+      }
+      return response.json() as Promise<T>;
+    })();
+
+    if (responseCache.size >= MAX_CACHE_ENTRIES) {
+      const oldest = responseCache.keys().next().value;
+      if (oldest) responseCache.delete(oldest);
     }
-    return response.json() as Promise<T>;
+    responseCache.set(cacheKey, { expiresAt: Date.now() + cacheDuration(path), value: request });
+    try {
+      return await request;
+    } catch (error) {
+      responseCache.delete(cacheKey);
+      throw error;
+    }
   }
 
   listCouncils(input: { councilType?: string; page?: number; perPage?: number } = {}) {
