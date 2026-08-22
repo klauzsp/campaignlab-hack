@@ -120,6 +120,12 @@ function cacheDuration(path: string) {
   return 2 * 60_000;
 }
 
+const RETRYABLE_POTERIS_STATUSES = new Set([500, 502, 503, 504]);
+
+function retryDelay(milliseconds: number) {
+  return new Promise((resolve) => setTimeout(resolve, milliseconds));
+}
+
 export class PoterisClient {
   private readonly baseUrl: string;
   private readonly token?: string;
@@ -143,15 +149,20 @@ export class PoterisClient {
     if (cached) responseCache.delete(cacheKey);
 
     const request = (async () => {
-      const response = await fetch(url, {
-        headers: this.token ? { Authorization: `Bearer ${this.token}` } : undefined,
-        signal: AbortSignal.timeout(30_000),
-      });
-      if (!response.ok) {
+      for (let attempt = 0; attempt < 2; attempt += 1) {
+        const response = await fetch(url, {
+          headers: this.token ? { Authorization: `Bearer ${this.token}` } : undefined,
+          signal: AbortSignal.timeout(30_000),
+        });
+        if (response.ok) return response.json() as Promise<T>;
         const detail = await response.text();
+        if (attempt === 0 && RETRYABLE_POTERIS_STATUSES.has(response.status)) {
+          await retryDelay(250);
+          continue;
+        }
         throw new PoterisError(`Poteris request failed (${response.status}): ${detail.slice(0, 240)}`, response.status);
       }
-      return response.json() as Promise<T>;
+      throw new PoterisError("Poteris request failed after retrying.");
     })();
 
     if (responseCache.size >= MAX_CACHE_ENTRIES) {

@@ -160,6 +160,29 @@ function textFromMcpResult(result: Awaited<ReturnType<Client["callTool"]>>) {
     .join("\n");
 }
 
+function focusedFollowUpDocument(question: string, priorEvidence: Evidence[]) {
+  if (!/\b(effect(?:ive|iveness)?|worked|working|successful|success|impact|result|sensible|smart|worth)\b/i.test(question)) return undefined;
+  const questionText = question.toLowerCase();
+  const councilMatches = priorEvidence.filter((item) => {
+    if (!item.documentId || !item.councilName) return false;
+    const identifyingWords = item.councilName.toLowerCase().split(/[^a-z0-9]+/).filter((word) =>
+      word.length > 3 && !["borough", "council", "county", "district", "metropolitan", "city"].includes(word),
+    );
+    return identifyingWords.some((word) => questionText.includes(word));
+  });
+  const namedCouncils = new Set(councilMatches.map((item) => item.councilName));
+  if (namedCouncils.size !== 1) return undefined;
+  const queryWords = new Set(questionText.split(/[^a-z0-9]+/).filter((word) =>
+    word.length > 4 && !["about", "council", "effective", "effectiveness", "their", "through", "which", "would"].includes(word),
+  ));
+  return councilMatches
+    .map((item) => ({
+      item,
+      score: [...queryWords].filter((word) => `${item.title} ${item.excerpt}`.toLowerCase().includes(word)).length,
+    }))
+    .sort((a, b) => b.score - a.score)[0]?.item;
+}
+
 export async function runGeminiMcpAgent(
   question: string,
   councilId?: number,
@@ -275,14 +298,46 @@ export async function runGeminiMcpAgent(
     const priorEvidenceContext = priorEvidenceEntries.length
       ? `\n\nPreviously verified sources from the immediately preceding answer remain available and may be cited in this answer:\n${priorEvidenceEntries.map(({ item, citationIndex }) => `[${citationIndex}] ${item.councilName ?? "Council"} — ${item.title}: ${item.excerpt}`).join("\n")}`
       : "";
+    total = Math.max(total, evidence.length);
+
+    let focusedDocumentContext = "";
+    const focusedSource = focusedFollowUpDocument(question, priorEvidence);
+    if (focusedSource?.documentId) {
+      const step = { tool: "get_document", label: "Opened a relevant source document", round: 1 };
+      trace.push(step);
+      options.onTrace?.(step);
+      toolCallCount += 1;
+      try {
+        const result = await mcp.callTool({
+          name: "get_document",
+          arguments: {
+            documentId: focusedSource.documentId,
+            includeText: true,
+            maxCharacters: mode === "quick" ? 4500 : 8000,
+          },
+        });
+        if (!result.isError) {
+          const raw = textFromMcpResult(result);
+          let parsed: unknown = raw;
+          try { parsed = JSON.parse(raw); } catch { /* Preserve non-JSON tool output. */ }
+          const prepared = prepareResult(parsed);
+          focusedDocumentContext = `\n\nTo accelerate this named-council follow-up, the most relevant previously cited document has already been opened. If it is sufficient, answer now without making a redundant tool call. Cite only citationIndex values supplied here or in the previous evidence:\n${JSON.stringify(prepared)}`;
+        }
+      } catch { /* Fall back to the normal agent research loop. */ }
+    }
 
     const conversationContext = history.length
       ? `\n\nEarlier conversation for resolving references such as “those” or “the second option”:\n${history.slice(-8).map((message) => `${message.role === "officer" ? "Officer" : "Atlas"}: ${message.content.slice(0, 6000)}`).join("\n")}`
       : "";
     const contents: GeminiContent[] = [{
       role: "user",
-      parts: [{ text: `Research the officer's latest question and answer it using council evidence: ${question}\n${regionalGuidance}${councilId ? `\nThe officer selected council ID ${councilId}.` : ""}${regionalEvidenceContext}${priorEvidenceContext}${conversationContext}` }],
+      parts: [{ text: `Research the officer's latest question and answer it using council evidence: ${question}\n${regionalGuidance}${councilId ? `\nThe officer selected council ID ${councilId}.` : ""}${regionalEvidenceContext}${priorEvidenceContext}${focusedDocumentContext}${conversationContext}` }],
     }];
+
+    if (focusedDocumentContext) {
+      const analysis = await withGemini(`You are Atlas, a careful UK local-government research agent. Answer the officer's evaluative follow-up using only the verified evidence below. Give a direct but qualified judgement. Separate documented implementation, documented outcomes, and professional inference. Do not claim the approach was effective unless the evidence reports an appropriate outcome. Cite the supplied source numbers in evidenceIds.\n\nOfficer's question: ${question}${priorEvidenceContext}${focusedDocumentContext}\n\n${outputShape}`);
+      return { analysis, evidence, total, provider: "Gemini agent", trace, mode };
+    }
 
     const callGemini = async (forceTool: boolean, disableTools = false) => {
       const response = await fetch(endpoint, {
@@ -291,7 +346,7 @@ export async function runGeminiMcpAgent(
         body: JSON.stringify({
           systemInstruction: { parts: [{ text: `You are Atlas, a careful UK local-government research agent. Use the supplied MCP tools and previously verified sources to retrieve facts; never answer a factual council question from memory. Choose tools based on intent. For cross-council issues, start with research_issue and refine only when results are weak. When two or more councils are named for comparison, use compare_councils with multiple concise search-term variants. For any question about one named council—especially whether an approach is sensible, effective, successful, or worth adopting—use investigate_council_topic with variants covering the intervention, the service problem, and measurable outcomes. Reuse and cite relevant previously verified sources; do not discard them merely because a fresh exact search is weak. Never infer that evidence is absent from one exact search: resolve the named council, try exact, broader, and outcome-oriented terms, then open the strongest document when effectiveness is at issue. After resolving a named council, scope any additional search_council_records call to that councilId unless the officer explicitly asks for wider comparators. An evaluative answer must give a direct, qualified judgement and separate (1) documented implementation, (2) documented outcomes, and (3) professional inference about likely benefits, risks, costs, and transferability. Use words such as “proven”, “caused”, “highly effective”, or “cost-saving” only when the evidence contains an appropriate causal evaluation or quantified financial result; otherwise say “the council reports”, “is associated with”, “appears promising”, or “likely”. Never invent implementation details, costs, savings, system integrations, or risks as documented facts; label general operational reasoning as professional inference. A lack of causal proof limits confidence but does not prevent a reasoned assessment. A comparison answer must identify similarities, differences, evidence strength, and limitations; uneven evidence should produce a qualified comparison rather than a blanket no-evidence response. Distinguish proposals from adopted decisions and do not claim an approach worked unless evidence says so. Every factual approach must cite citationIndex values returned by tools. You are in ${mode.toUpperCase()} mode: ${mode === "quick" ? "prioritise a useful answer within three research rounds, make no more than two parallel calls at once, and open full documents when assessing effectiveness" : "research thoroughly and open strong source documents where useful"}. ${outputShape}` }] },
           contents,
-          ...(disableTools ? {} : {
+          ...(disableTools ? { generationConfig: { responseMimeType: "application/json" } } : {
             tools: [{ functionDeclarations }],
             toolConfig: { functionCallingConfig: { mode: forceTool ? "ANY" : "AUTO" } },
           }),
@@ -350,7 +405,18 @@ export async function runGeminiMcpAgent(
 
       const responseParts: GeminiPart[] = [];
       for (const { call, result } of executed) {
-        if (result.isError) throw new Error(`MCP tool ${call.name} failed: ${textFromMcpResult(result)}`);
+        if (result.isError) {
+          responseParts.push({
+            functionResponse: {
+              name: call.name,
+              response: {
+                error: textFromMcpResult(result),
+                instruction: "This retrieval failed upstream. Try one alternative tool call or a shorter, broader query. Do not claim that no council evidence exists from this failure alone.",
+              },
+            },
+          });
+          continue;
+        }
         const raw = textFromMcpResult(result);
         let parsed: unknown = raw;
         try { parsed = JSON.parse(raw); } catch { /* Preserve non-JSON tool output. */ }
