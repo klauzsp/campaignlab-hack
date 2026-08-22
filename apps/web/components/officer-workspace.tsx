@@ -41,15 +41,6 @@ function ResearchBrief({ result }: { result: Result }) {
 
   return (
     <article className="agent-response">
-      <div className="response-identity">
-        <span className="atlas-response-mark">
-          <Image src="/atlaslogo.png" alt="" width={28} height={28} />
-        </span>
-        <span>
-          <strong>Atlas</strong>
-          <small>Evidence brief</small>
-        </span>
-      </div>
       <div className="brief-header">
         <div>
           <h1>{result.analysis.headline}</h1>
@@ -392,7 +383,6 @@ export function OfficerWorkspace() {
             />
           </span>
           <strong>Atlas</strong>
-          <span className="header-divider" />
         </div>
         <div className="header-actions">
           {hasThread && (
@@ -532,16 +522,10 @@ export function OfficerWorkspace() {
             <div ref={threadEnd} />
             <section className={`follow-up${loading ? " loading" : ""}`}>
               <div>
-                <span className="ai-label">
-                  <SparkIcon /> Continue this thread
-                </span>
                 <h2>
                   {loading ? "Researching your follow-up…" : "Ask a follow-up"}
                 </h2>
-                <p>
-                  The agent keeps the conversation context and verifies new
-                  claims against Poteris.
-                </p>
+                <p>Wanna go deeper or ask something new?</p>
               </div>
               <form
                 onSubmit={(event) => {
