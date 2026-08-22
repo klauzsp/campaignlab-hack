@@ -41,6 +41,12 @@ function ResearchBrief({ result }: { result: Result }) {
 
   return (
     <article className="agent-response">
+      <div className="response-identity">
+        <span className="atlas-response-mark">
+          <Image src="/atlaslogo.png" alt="" width={28} height={28} />
+        </span>
+        <span><strong>Atlas</strong><small>Evidence brief</small></span>
+      </div>
       <div className="brief-header">
         <div>
           <h1>{result.analysis.headline}</h1>
@@ -384,8 +390,10 @@ export function OfficerWorkspace() {
           </span>
           <strong>Atlas</strong>
           <span className="header-divider" />
+          <span className="header-context">Council intelligence</span>
         </div>
         <div className="header-actions">
+          <span className="connection-status"><i /> Live records</span>
           {hasThread && (
             <button
               type="button"
@@ -403,6 +411,53 @@ export function OfficerWorkspace() {
       <div className="page-container">
         {!hasThread && !loading && (
           <section className="research-intro" id="research">
+            <div className="home-research-copy">
+              <div className="intro-copy">
+                <span className="hero-kicker"><SparkIcon /> Evidence-led council research</span>
+                <h1>What would you like to investigate?</h1>
+                <p>
+                  Ask about a service challenge, decision or policy. Atlas
+                  searches council records and returns a sourced briefing.
+                </p>
+              </div>
+              <form
+                className="query-form"
+                onSubmit={(event) => {
+                  event.preventDefault();
+                  void runResearch(query);
+                }}
+              >
+                <div className="query-input">
+                  <SearchIcon />
+                  <textarea
+                    value={query}
+                    onChange={(event) => setQuery(event.target.value)}
+                    aria-label="Research question"
+                    rows={2}
+                    placeholder="Ask a question about UK councils"
+                  />
+                  <button className="primary-button" type="submit">
+                    Research <ArrowIcon />
+                  </button>
+                </div>
+                {options}
+              </form>
+              <div className="suggestions">
+                <span>Suggested</span>
+                {examples.map((example) => (
+                  <button
+                    key={example}
+                    onClick={() =>
+                      setQuery(
+                        `How have councils addressed ${example.toLowerCase()}?`,
+                      )
+                    }
+                  >
+                    {example}
+                  </button>
+                ))}
+              </div>
+            </div>
             <UkDiscoveryMap
               onExplore={(regionalQuestion) => {
                 setQuery(regionalQuestion);
@@ -410,50 +465,6 @@ export function OfficerWorkspace() {
               }}
               disabled={loading}
             />
-            <div className="intro-copy">
-              <h1>What would you like to investigate?</h1>
-              <p>
-                Ask about a service challenge, decision or policy. Atlas
-                searches council records and returns a sourced briefing.
-              </p>
-            </div>
-            <form
-              className="query-form"
-              onSubmit={(event) => {
-                event.preventDefault();
-                void runResearch(query);
-              }}
-            >
-              <div className="query-input">
-                <SearchIcon />
-                <textarea
-                  value={query}
-                  onChange={(event) => setQuery(event.target.value)}
-                  aria-label="Research question"
-                  rows={2}
-                  placeholder="Ask a question about UK councils"
-                />
-                <button className="primary-button" type="submit">
-                  Research <ArrowIcon />
-                </button>
-              </div>
-              {options}
-            </form>
-            <div className="suggestions">
-              <span>Suggested</span>
-              {examples.map((example) => (
-                <button
-                  key={example}
-                  onClick={() =>
-                    setQuery(
-                      `How have councils addressed ${example.toLowerCase()}?`,
-                    )
-                  }
-                >
-                  {example}
-                </button>
-              ))}
-            </div>
           </section>
         )}
         {error && (
