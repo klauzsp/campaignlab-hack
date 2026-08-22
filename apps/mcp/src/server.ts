@@ -1,6 +1,6 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
-import { compareCouncilEvidence, findCouncils, investigateCouncilTopic, PoterisClient, researchIssue } from "@civic-lens/core";
+import { compareCouncilEvidence, exploreCouncilRegion, findCouncils, investigateCouncilTopic, PoterisClient, researchIssue } from "@civic-lens/core";
 import { z } from "zod";
 
 const client = new PoterisClient({
@@ -91,6 +91,17 @@ server.tool(
   },
   async ({ councilName, topic, searchTerms, limit }) =>
     json(await investigateCouncilTopic(client, { councilName, topic, searchTerms, limit })),
+);
+
+server.tool(
+  "explore_region",
+  "Retrieve recent decisions and minuted meetings from representative councils in a UK region. Use for broad regional discovery questions about current priorities, pressures, activity, or policy discussions. Treat the result as a representative scan, not comprehensive regional coverage.",
+  {
+    region: z.string().min(2),
+    councilNames: z.array(z.string().min(2)).min(2).max(6).describe("Representative councils explicitly named in the officer's regional discovery prompt"),
+    perCouncil: z.number().int().min(2).max(10).default(5),
+  },
+  async ({ region, councilNames, perCouncil }) => json(await exploreCouncilRegion(client, { region, councilNames, perCouncil })),
 );
 
 server.tool(

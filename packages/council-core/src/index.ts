@@ -324,6 +324,40 @@ export async function investigateCouncilTopic(
   };
 }
 
+export async function exploreCouncilRegion(
+  client: PoterisClient,
+  input: { region: string; councilNames: string[]; perCouncil?: number },
+) {
+  const perCouncil = Math.min(input.perCouncil ?? 5, 10);
+  const resolved = await Promise.all(input.councilNames.map(async (requestedName) => ({ requestedName, matches: await findCouncils(client, requestedName, 3) })));
+  const councilResults = await Promise.all(resolved.map(async ({ requestedName, matches }) => {
+    const council = matches[0];
+    if (!council) return { requestedName, council: null, decisions: 0, meetings: 0, evidence: [] as Evidence[] };
+    const [decisions, meetings] = await Promise.all([
+      client.listDecisions({ councilId: council.id, perPage: perCouncil }),
+      client.listMeetings({ councilId: council.id, hasMinutes: true, perPage: perCouncil }),
+    ]);
+    const decisionEvidence: Evidence[] = decisions.items.map((item) => ({
+      id: `Decision-${item.id}`, documentId: null, councilId: council.id, councilName: council.name ?? requestedName,
+      meetingName: item.decision_maker, title: item.purpose ?? item.topline ?? `Decision ${item.id}`,
+      excerpt: item.topline ?? item.content?.slice(0, 1200) ?? item.outcome ?? "Formal council decision returned by Poteris.",
+      url: item.url, date: item.date, score: null,
+    }));
+    const meetingEvidence: Evidence[] = meetings.items.map((item) => ({
+      id: `Meeting-${item.id}`, documentId: null, councilId: council.id, councilName: council.name ?? requestedName,
+      meetingName: item.name, title: item.name ?? `Meeting ${item.id}`,
+      excerpt: item.topline ?? "Recent meeting with minutes available through Poteris.",
+      url: item.url, date: item.date, score: null,
+    }));
+    return { requestedName, council, decisions: decisions.total, meetings: meetings.total, evidence: [...decisionEvidence, ...meetingEvidence] };
+  }));
+  return {
+    region: input.region,
+    representativeCouncils: councilResults.map(({ requestedName, council, decisions, meetings }) => ({ requestedName, council, decisions, meetings })),
+    evidence: councilResults.flatMap((result) => result.evidence),
+  };
+}
+
 function textValue(value: unknown): string | null {
   return typeof value === "string" && value.trim() ? value.trim() : null;
 }

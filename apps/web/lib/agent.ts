@@ -38,6 +38,8 @@ export type ConversationMessage = {
 const outputShape = `Return JSON only with this exact shape:
 {"headline":"...","summary":"...","approaches":[{"title":"...","detail":"...","evidenceIds":[1]}],"considerations":["..."],"nextSteps":["..."]}`;
 
+const regionalGuidance = "If this is a broad regional discovery question about current priorities, pressures, decisions, or activity, call explore_region with the representative councils named in the question. Describe its findings as a representative evidence scan, not complete regional coverage.";
+
 function buildPrompt(query: string, evidence: Evidence[]) {
   const sources = evidence.map((item, index) => ({
     id: index + 1,
@@ -123,6 +125,7 @@ function toolLabel(name: string, args: Record<string, unknown>) {
     find_council: "Resolved a council name",
     compare_councils: "Compared council evidence",
     investigate_council_topic: "Investigated a council approach",
+    explore_region: "Scanned recent regional activity",
     list_decisions: "Reviewed formal decisions",
     list_meetings: "Reviewed council meetings",
     list_people: "Reviewed council members",
@@ -234,7 +237,7 @@ export async function runGeminiMcpAgent(
       : "";
     const contents: GeminiContent[] = [{
       role: "user",
-      parts: [{ text: `Research the officer's latest question and answer it using council evidence: ${question}${councilId ? `\nThe officer selected council ID ${councilId}.` : ""}${priorEvidenceContext}${conversationContext}` }],
+      parts: [{ text: `Research the officer's latest question and answer it using council evidence: ${question}\n${regionalGuidance}${councilId ? `\nThe officer selected council ID ${councilId}.` : ""}${priorEvidenceContext}${conversationContext}` }],
     }];
 
     const callGemini = async (forceTool: boolean, disableTools = false) => {
@@ -267,6 +270,8 @@ export async function runGeminiMcpAgent(
         args.perCouncil = Math.min(typeof args.perCouncil === "number" ? args.perCouncil : 8, 8);
       } else if (name === "investigate_council_topic") {
         args.limit = Math.min(typeof args.limit === "number" ? args.limit : 10, 10);
+      } else if (name === "explore_region") {
+        args.perCouncil = Math.min(typeof args.perCouncil === "number" ? args.perCouncil : 4, 4);
       } else if (name.startsWith("list_")) {
         args.limit = Math.min(typeof args.limit === "number" ? args.limit : 15, 15);
       } else if (name === "get_document") {
