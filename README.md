@@ -1,6 +1,6 @@
-# Civic Lens
+# Atlas
 
-An evidence-first research workspace for UK council officers. Civic Lens connects a Gemini research agent to the live [Poteris Council Gateway API](https://councilgateway.poteris.co.uk/council-api/docs) through MCP tools, keeps source links attached to every finding, and turns the evidence into a concise briefing.
+An evidence-first research workspace for UK council officers. Atlas connects a Gemini research agent to the live [Poteris Council Gateway API](https://councilgateway.poteris.co.uk/council-api/docs) through MCP tools, keeps source links attached to every finding, and turns the evidence into a concise briefing.
 
 ## Quick start
 
@@ -14,7 +14,7 @@ Open `http://localhost:3000`. Next.js loads provider configuration from `apps/we
 
 ## MCP server
 
-The stdio MCP server exposes `research_issue`, `search_council_records`, `get_document`, `list_councils`, `list_decisions`, `list_meetings`, `list_people`, and `list_committees`.
+The stdio MCP server exposes `research_issue`, `search_council_records`, `get_document`, `list_councils`, `find_council`, `compare_councils`, `list_decisions`, `list_meetings`, `list_people`, and `list_committees`. Council comparisons resolve every named authority against the full directory and search several issue-wording variants before the agent draws a conclusion.
 
 ```bash
 pnpm mcp
@@ -25,7 +25,7 @@ Example client configuration after `pnpm install`:
 ```json
 {
   "mcpServers": {
-    "civic-lens": {
+    "atlas": {
       "command": "pnpm",
       "args": ["--dir", "/absolute/path/to/council", "mcp"],
       "env": {
@@ -41,6 +41,8 @@ Example client configuration after `pnpm install`:
 - `packages/council-core`: typed Poteris client and evidence normalization
 - `apps/mcp`: model-neutral MCP tools over that client
 - `apps/web`: Next.js officer workspace, MCP client, and Gemini/OpenAI adapters
+
+The web interface uses the official Atlassian CSS reset and design-token themes. Its information architecture follows an Atlassian-style page header and tabbed workspace: the primary Summary stays focused, while Sources and Agent activity are available on demand.
 
 For Gemini, the Next.js backend starts an MCP client, gives Gemini the server's live tool schemas, executes Gemini's selected tools, and returns results for further tool-selection rounds. The UI shows the completed MCP call trace so an agent response is visibly distinct from evidence-only fallback output. Follow-up questions carry the current research thread into a fresh evidence-verification loop, allowing references such as “those approaches” while avoiding unsupported answers from chat memory alone.
 

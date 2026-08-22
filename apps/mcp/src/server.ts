@@ -1,6 +1,6 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
-import { PoterisClient, researchIssue } from "@civic-lens/core";
+import { compareCouncilEvidence, findCouncils, PoterisClient, researchIssue } from "@civic-lens/core";
 import { z } from "zod";
 
 const client = new PoterisClient({
@@ -8,7 +8,7 @@ const client = new PoterisClient({
   token: process.env.POTERIS_API_TOKEN,
 });
 
-const server = new McpServer({ name: "civic-lens", version: "0.1.0" });
+const server = new McpServer({ name: "atlas", version: "0.1.0" });
 const json = (value: unknown) => ({ content: [{ type: "text" as const, text: JSON.stringify(value, null, 2) }] });
 
 server.tool(
@@ -58,6 +58,29 @@ server.tool(
 );
 
 server.tool(
+  "find_council",
+  "Resolve a council name to its Poteris numeric ID. Searches the complete council directory, not just one page. Use whenever a question names a council and its ID is unknown.",
+  {
+    name: z.string().min(2).describe("Council name, which may be partial, such as Wandsworth or Birmingham"),
+    limit: z.number().int().min(1).max(10).default(5),
+  },
+  async ({ name, limit }) => json(await findCouncils(client, name, limit)),
+);
+
+server.tool(
+  "compare_councils",
+  "Build a side-by-side evidence pack for two or more named councils. Resolves every council across the full directory and runs several council-specific searches. Use this for any comparison question instead of relying on one exact search.",
+  {
+    councilNames: z.array(z.string().min(2)).min(2).max(5),
+    issue: z.string().min(2).describe("The policy or service issue being compared, excluding council names"),
+    searchTerms: z.array(z.string().min(2)).min(1).max(5).optional().describe("Two to five concise variants, from exact to broad, such as 'missed bin collections' and 'missed collections'"),
+    perCouncil: z.number().int().min(3).max(15).default(8),
+  },
+  async ({ councilNames, issue, searchTerms, perCouncil }) =>
+    json(await compareCouncilEvidence(client, { councilNames, issue, searchTerms, perCouncil })),
+);
+
+server.tool(
   "list_decisions",
   "List formal council decisions with optional council and date filters.",
   {
@@ -101,7 +124,7 @@ server.tool(
 
 server.tool(
   "list_committees",
-  "List the committees belonging to a council. Resolve the council ID with list_councils first.",
+  "List the committees belonging to a council. Resolve the council ID with find_council first.",
   {
     councilId: z.number().int().positive(),
     limit: z.number().int().min(1).max(100).default(50),

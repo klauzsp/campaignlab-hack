@@ -1,5 +1,5 @@
 {
-  "name": "civic-lens",
+  "name": "atlas-council-agent",
   "private": true,
   "packageManager": "pnpm@10.11.0",
   "scripts": {

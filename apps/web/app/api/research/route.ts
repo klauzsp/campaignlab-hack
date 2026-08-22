@@ -18,7 +18,7 @@ export async function POST(request: Request) {
           if (!item || typeof item !== "object") return [];
           const candidate = item as { role?: unknown; content?: unknown };
           if ((candidate.role !== "officer" && candidate.role !== "assistant") || typeof candidate.content !== "string") return [];
-          return [{ role: candidate.role, content: candidate.content.slice(0, 2000) }];
+          return [{ role: candidate.role, content: candidate.content.slice(0, 6000) }];
         })
       : [];
     if (process.env.AI_PROVIDER?.toLowerCase() === "gemini") {

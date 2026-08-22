@@ -75,7 +75,7 @@ type GeminiContent = { role: "user" | "model"; parts: GeminiPart[] };
 type McpTool = { name: string; description?: string; inputSchema: Record<string, unknown> };
 type McpConnection = { client: Client; tools: McpTool[] };
 
-const globalMcp = globalThis as typeof globalThis & { civicLensMcp?: Promise<McpConnection> };
+const globalMcp = globalThis as typeof globalThis & { atlasMcp?: Promise<McpConnection> };
 
 async function createMcpConnection(): Promise<McpConnection> {
   const workspaceRoot = process.env.CIVIC_LENS_ROOT ?? path.resolve(process.cwd(), "../..");
@@ -89,18 +89,18 @@ async function createMcpConnection(): Promise<McpConnection> {
     env: childEnv,
     stderr: "pipe",
   });
-  const client = new Client({ name: "civic-lens-web-agent", version: "0.1.0" });
+  const client = new Client({ name: "atlas-web-agent", version: "0.1.0" });
   await client.connect(transport);
   const listed = await client.listTools();
   return { client, tools: listed.tools as McpTool[] };
 }
 
 async function getMcpConnection() {
-  globalMcp.civicLensMcp ??= createMcpConnection().catch((error) => {
-    globalMcp.civicLensMcp = undefined;
+  globalMcp.atlasMcp ??= createMcpConnection().catch((error) => {
+    globalMcp.atlasMcp = undefined;
     throw error;
   });
-  return globalMcp.civicLensMcp;
+  return globalMcp.atlasMcp;
 }
 
 function cleanSchema(value: unknown): unknown {
@@ -120,6 +120,8 @@ function toolLabel(name: string, args: Record<string, unknown>) {
     search_council_records: "Searched council records",
     get_document: "Opened a source document",
     list_councils: "Resolved council information",
+    find_council: "Resolved a council name",
+    compare_councils: "Compared council evidence",
     list_decisions: "Reviewed formal decisions",
     list_meetings: "Reviewed council meetings",
     list_people: "Reviewed council members",
@@ -192,6 +194,21 @@ export async function runGeminiMcpAgent(
       if (Array.isArray(data.evidence)) {
         return { ...data, evidence: data.evidence.map((item) => ({ ...(item as object), citationIndex: registerEvidence(item as Record<string, unknown>) })) };
       }
+      if (Array.isArray(data.councils)) {
+        return {
+          ...data,
+          councils: data.councils.map((item) => {
+            const council = item as Record<string, unknown>;
+            if (typeof council.totalMatches === "number") total = Math.max(total, council.totalMatches);
+            return {
+              ...council,
+              evidence: Array.isArray(council.evidence)
+                ? council.evidence.map((source) => ({ ...(source as object), citationIndex: registerEvidence(source as Record<string, unknown>) }))
+                : [],
+            };
+          }),
+        };
+      }
       if (Array.isArray(data.items) && data.items.length) {
         const recordType = data.items[0] as Record<string, unknown>;
         if ("url" in recordType && ("topline" in recordType || "purpose" in recordType)) {
@@ -205,7 +222,7 @@ export async function runGeminiMcpAgent(
     };
 
     const conversationContext = history.length
-      ? `\n\nEarlier conversation for resolving references such as “those” or “the second option”:\n${history.slice(-8).map((message) => `${message.role === "officer" ? "Officer" : "Civic Lens"}: ${message.content.slice(0, 1800)}`).join("\n")}`
+      ? `\n\nEarlier conversation for resolving references such as “those” or “the second option”:\n${history.slice(-8).map((message) => `${message.role === "officer" ? "Officer" : "Atlas"}: ${message.content.slice(0, 6000)}`).join("\n")}`
       : "";
     const contents: GeminiContent[] = [{
       role: "user",
@@ -217,7 +234,7 @@ export async function runGeminiMcpAgent(
         method: "POST",
         headers: { "Content-Type": "application/json", "x-goog-api-key": apiKey },
         body: JSON.stringify({
-          systemInstruction: { parts: [{ text: `You are Civic Lens, a careful UK local-government research agent. Use the supplied MCP tools to retrieve facts; never answer a factual council question from memory. Choose tools based on intent. For cross-council issues, start with research_issue and refine only when results are weak. Distinguish proposals from adopted decisions and do not claim an approach worked unless evidence says so. Every factual approach must cite citationIndex values returned by tools. You are in ${mode.toUpperCase()} mode: ${mode === "quick" ? "prioritise a useful answer within three research rounds, make no more than two parallel calls at once, and open full documents only when excerpts cannot answer the question" : "research thoroughly and open strong source documents where useful"}. ${outputShape}` }] },
+          systemInstruction: { parts: [{ text: `You are Atlas, a careful UK local-government research agent. Use the supplied MCP tools to retrieve facts; never answer a factual council question from memory. Choose tools based on intent. For cross-council issues, start with research_issue and refine only when results are weak. When two or more councils are named for comparison, use compare_councils with multiple concise search-term variants. Never infer that evidence is absent from one exact search: resolve each named council, try broader council-specific terms, and compare the evidence that is available. A comparison answer must identify similarities, differences, evidence strength, and limitations; uneven evidence should produce a qualified comparison rather than a blanket no-evidence response. Distinguish proposals from adopted decisions and do not claim an approach worked unless evidence says so. Every factual approach must cite citationIndex values returned by tools. You are in ${mode.toUpperCase()} mode: ${mode === "quick" ? "prioritise a useful answer within three research rounds, make no more than two parallel calls at once, and open full documents only when excerpts cannot answer the question" : "research thoroughly and open strong source documents where useful"}. ${outputShape}` }] },
           contents,
           ...(disableTools ? {} : {
             tools: [{ functionDeclarations }],
@@ -238,6 +255,8 @@ export async function runGeminiMcpAgent(
       const args = { ...input };
       if (["research_issue", "search_council_records"].includes(name)) {
         args.limit = Math.min(typeof args.limit === "number" ? args.limit : 8, 8);
+      } else if (name === "compare_councils") {
+        args.perCouncil = Math.min(typeof args.perCouncil === "number" ? args.perCouncil : 8, 8);
       } else if (name.startsWith("list_")) {
         args.limit = Math.min(typeof args.limit === "number" ? args.limit : 15, 15);
       } else if (name === "get_document") {

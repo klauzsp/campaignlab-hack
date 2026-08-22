@@ -9,6 +9,8 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@atlaskit/css-reset": "^8.3.1",
+    "@atlaskit/tokens": "^16.8.0",
     "@civic-lens/core": "workspace:*",
     "@modelcontextprotocol/sdk": "^1.17.3",
     "next": "^16.1.0",

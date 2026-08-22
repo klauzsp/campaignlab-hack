@@ -32,6 +32,12 @@ importers:
 
   apps/web:
     dependencies:
+      '@atlaskit/css-reset':
+        specifier: ^8.3.1
+        version: 8.3.1(react@19.2.8)
+      '@atlaskit/tokens':
+        specifier: ^16.8.0
+        version: 16.8.0(react@19.2.8)
       '@civic-lens/core':
         specifier: workspace:*
         version: link:../../packages/council-core
@@ -68,6 +74,76 @@ importers:
         version: 5.9.3
 
 packages:
+
+  '@atlaskit/atlassian-context@1.1.1':
+    resolution: {integrity: sha512-Leyd9WQevi1ia+z16yJtVRr0VIU5Zg/ODYObxQm4FtsCXBZ55B4xtGNDFzPsdiaBFRVFVvxbeNloKmbbSKuNAA==}
+    peerDependencies:
+      react: ^18.2.0 || ^19.0.0
+
+  '@atlaskit/css-reset@8.3.1':
+    resolution: {integrity: sha512-45GSAu+nxV4TY7Y20IgqLZGJVSlvA2ozK6gJg4CYmQl/ibEzeHRgP8lzk5cpR2pyx3il1RnxA5azHyQYuWFVHw==}
+    peerDependencies:
+      react: ^18.2.0
+
+  '@atlaskit/ds-lib@8.0.0':
+    resolution: {integrity: sha512-z9NMlDmPkQ8YKvw9/L+DQlVSp6JKEXyttzaD21OlNMaNP9/we5cMsNxlC39Dw5jNDgCajpuWhdZtZzvpl0r9Cw==}
+    peerDependencies:
+      react: ^18.2.0 || ^19.0.0
+
+  '@atlaskit/feature-gate-js-client@6.0.2':
+    resolution: {integrity: sha512-x4TKOAhM9Ejb6e2CA3OrIMv+T6+FdPSgEPH+yzB+k/A5OOHBaoKLzcG9Fs1mBGp/fISiD966xmdPdYb1RcMPDw==}
+
+  '@atlaskit/platform-feature-flags@2.1.1':
+    resolution: {integrity: sha512-TvXQ/KNsKJrWnvM1LelNhRV4CmMVSV9MYkyDMg419wxRMWi3FWYJnYmivdrJWozx7yO1ZmZ0lEwVRQi0+EP6XA==}
+
+  '@atlaskit/react-compiler-gating@0.2.3':
+    resolution: {integrity: sha512-hSWZ1DyJChQ9ZmpmrA7VbdRIO2/RtYwBP7KKJbEG8+8KJW2A82A0mTj0TaH9hoB7JKQB+b8/vDLYA6febqT3wA==}
+
+  '@atlaskit/tokens@16.8.0':
+    resolution: {integrity: sha512-f2uHECMvQdhFSYLyhP+r76s3ez/00Cj3Yl/OhH1kSB9RXmZuSgyBGodesEiFJy8OaUS4QOlNtXfSwAXVzLet8Q==}
+    peerDependencies:
+      react: ^18.2.0 || ^19.0.0
+
+  '@babel/code-frame@7.29.7':
+    resolution: {integrity: sha512-Aup7aUOfpbAUg2ROOJN6Iw5f9DMBlzu0mIkm/malLQFN/YQgO48wCj0Kxa3sEHJvPVFg7siR+qRInwXd2qhQKw==}
+    engines: {node: '>=6.9.0'}
+
+  '@babel/generator@7.29.8':
+    resolution: {integrity: sha512-gZbepsdh3WDtgZKWL+vTPh71LSBrm/Y4/QDZBVCcYfmeTEEuoOYwlSy+G1StfJg+/Zy550u/3TATbm7qDbbMtg==}
+    engines: {node: '>=6.9.0'}
+
+  '@babel/helper-globals@7.29.7':
+    resolution: {integrity: sha512-3nQVUAtvkKH9zahfWgw96Jc/uFOmjACE1kQz82E2lqWmHBgjzbNlsC22nuQTfahmWeQtTq5nQ/4Nnd2A1wj4zA==}
+    engines: {node: '>=6.9.0'}
+
+  '@babel/helper-string-parser@7.29.7':
+    resolution: {integrity: sha512-Pb5ijPrZ89GDH8223L4UP8i6QApWxs04RbPQJTeWDV0/keR2E36MeKnyr6LYmUUvqRRI+Iv87SuF1W6ErINzYw==}
+    engines: {node: '>=6.9.0'}
+
+  '@babel/helper-validator-identifier@7.29.7':
+    resolution: {integrity: sha512-qehxGkRj55h/ff8EMaJ+cYhyaKlHIxqYDn682wQD7RNp9UujOQsHog2uS0r2vzr4pW+sXf90NeeayjcNaX3fFg==}
+    engines: {node: '>=6.9.0'}
+
+  '@babel/parser@7.29.8':
+    resolution: {integrity: sha512-E8lTAYNB1KW+FH+VGJuZM1ioAx2E6oVlvQFRrf5P8ZZmsiJXYAD9vTFV7yyEURNzgh1dFqMZuO6tUwcARbqFCA==}
+    engines: {node: '>=6.0.0'}
+    hasBin: true
+
+  '@babel/runtime@7.29.7':
+    resolution: {integrity: sha512-Nq8OhGWiZIZGV6hLHoyAKLLcJihP/xFeBMGJoUrxTX2psI8dCifzLhZISFb+VWS3wFMRDmCGw5R+dOySCqPLhw==}
+    engines: {node: '>=6.9.0'}
+
+  '@babel/template@7.29.7':
+    resolution: {integrity: sha512-puq+Gf35oI24FeN11LkoUQFqv9uwNeWpxXZi/Ji3rRIoKAzKnxRaZ+Gkj0vKS9ZCiTESfng1N9LyOyXvo+m+Gg==}
+    engines: {node: '>=6.9.0'}
+
+  '@babel/traverse@7.29.8':
+    resolution: {integrity: sha512-I5z7H3bf/41ktsNVLtpN0wAa336HkqIHQ5BuPLEhTkt1jVSyZpeNKIzTgEWmlxjdg81R0IgUCcaE+Ok3NvrfZg==}
+    engines: {node: '>=6.9.0'}
+
+  '@babel/types@7.29.8':
+    resolution: {integrity: sha512-Vj1jF3cPfxg7OAfoI7QnVKLoILlm2JF9pnVHrX8qx7AHMiYWT+NDAA7jChlNgRS4WTLc/fD1lXLmPixluj+3Gg==}
+    engines: {node: '>=6.9.0'}
 
   '@emnapi/runtime@1.11.3':
     resolution: {integrity: sha512-Xz4Tpyki7XyrpbUK1jR1AhdAdaXyhhY4lZ3neLodmhpuWfy2PAQN5B46sAiU4liOXGLkHypn/qU+jvfWSCYYLA==}
@@ -380,6 +456,19 @@ packages:
     cpu: [x64]
     os: [win32]
 
+  '@jridgewell/gen-mapping@0.3.13':
+    resolution: {integrity: sha512-2kkt/7niJ6MgEPxF0bYdQ6etZaA+fQvDcLKckhy1yIQOzaoKjBBjSj63/aLVjYE3qhRt5dvM+uUyfCg6UKCBbA==}
+
+  '@jridgewell/resolve-uri@3.1.2':
+    resolution: {integrity: sha512-bRISgCIjP20/tbWSPWMEi54QVPRZExkuD9lJL+UIxUKtwVJA8wW1Trb1jMs1RFXo1CBTNZ/5hpC9QvmKWdopKw==}
+    engines: {node: '>=6.0.0'}
+
+  '@jridgewell/sourcemap-codec@1.5.5':
+    resolution: {integrity: sha512-cYQ9310grqxueWbl+WuIUIaiUaDcj7WOq5fVhEljNVgRfOUhY9fy2zTvfoqWsnebh8Sl70VScFbICvJnLKB0Og==}
+
+  '@jridgewell/trace-mapping@0.3.31':
+    resolution: {integrity: sha512-zzNR+SdQSDJzc8joaeP8QQoCQr8NuYx2dIIytl1QeBEZHJ9uW6hebsrYgbz8hJwUQao3TWCMtmfV8Nu1twOLAw==}
+
   '@modelcontextprotocol/sdk@1.30.0':
     resolution: {integrity: sha512-xKd8OIzlqNzcqcNumGAa6g+PW2kjD5vrpcKOnfldAUPP3j7lnqMPwlTXQm8gF+UwH72z0lqaRbjr9hqGz0eITA==}
     engines: {node: '>=18'}
@@ -441,6 +530,12 @@ packages:
     cpu: [x64]
     os: [win32]
 
+  '@statsig/client-core@3.30.2':
+    resolution: {integrity: sha512-F3u1+LDml6IFz/tMbSYI0pEOMR13OHM71lLJ3RuoWpK2KpCwfsHpt7kBmUKJxUXZ05CP/jWgmhG/ROj7eqDCPQ==}
+
+  '@statsig/js-client@3.30.2':
+    resolution: {integrity: sha512-Cjs4uzyAxt1sw44oa6qSNWuZdO11jmgrpOVBC2NajtpA55GBmAfjZ3vQdXizUffUZMRmFiEpGwxi9zmjFEG7Sw==}
+
   '@swc/helpers@0.5.23':
     resolution: {integrity: sha512-5lSsMOTXURePglDfvuAQUqkGek9Hg2kksOYay2m0+XR++b2NWYL/4sWyuvVBIs8oKnJaxkdi9whaL/sqN13afw==}
 
@@ -474,6 +569,9 @@ packages:
     resolution: {integrity: sha512-KAUDn1OSS0fmPlGO+NOUMRcOQ/b/shUBH3OgkG73mPgdf+JD/BQ6fHboGxNOxnUmlwcq+lLq3dTkayRPuSfXwg==}
     engines: {node: '>=6.0.0'}
     hasBin: true
+
+  bind-event-listener@3.0.0:
+    resolution: {integrity: sha512-PJvH288AWQhKs2v9zyfYdPzlPqf5bXbGMmhmUIY9x4dAUGIWgomO771oBQNwJnMQSnUIXhKu6sgzpBRXTlvb8Q==}
 
   body-parser@2.3.0:
     resolution: {integrity: sha512-2cGmJupaNgg+QUwVLAucDuWuoMZ6EX9iHDRswZ5lsNYEmwPaRknMPCLZz07yTzVq/83p4o/wzbDZbBrTvGGTIw==}
@@ -580,6 +678,9 @@ packages:
     resolution: {integrity: sha512-aIL5Fx7mawVa300al2BnEE4iNvo1qETxLrPI/o05L7z6go7fCw1J6EQmbK4FmJ2AS7kgVF/KEZWufBfdClMcPg==}
     engines: {node: '>= 0.6'}
 
+  eventemitter3@4.0.7:
+    resolution: {integrity: sha512-8guHBZCwKnFhYdHr2ysuRWErTwhoN2X8XELRlrRwpmfeY2jjuUN4taQMsULKUVo1K4DvZl+0pgfyoysHxvmvEw==}
+
   eventsource-parser@3.1.1:
     resolution: {integrity: sha512-EKN1vKAMcZ8MlYMpaNuxN6R9yakzH6uajHcHVTqWJzvu5pWw9DyhbP35HH8MVBQ+dZjAfDxk+A8NiR9KWaXiyQ==}
     engines: {node: '>=18.0.0'}
@@ -675,6 +776,14 @@ packages:
 
   jose@6.2.10:
     resolution: {integrity: sha512-iiW7J9qRFlGxvCOIBDBDxFePQSn7ZMAnrYGhrrOo6siO/MIqwfyilLR27pkfDgUk+raLuzADS8A3S/KLBisc0g==}
+
+  js-tokens@4.0.0:
+    resolution: {integrity: sha512-RdJUflcE3cUzKiMqQgsCu06FPu9UdIJO0beYbPhHN4k6apgJtifcoCtT9bcxOpYBtpD2kCM6Sbzg4CausW/PKQ==}
+
+  jsesc@3.1.0:
+    resolution: {integrity: sha512-/sM3dO2FOzXjKQhJuo0Q173wf2KOo8t4I8vHy6lF9poUp7bKT0/NHE8fPX23PwfhnykfqnC2xRxOnVw5XuGIaA==}
+    engines: {node: '>=6'}
+    hasBin: true
 
   json-schema-traverse@1.0.0:
     resolution: {integrity: sha512-NM8/P9n3XjXhIZn1lLhkFaACTOURQXjWhV4BA/RnOv8xvgqtqpAX9IO4mRQxSx1Rlo4tqzeqb0sOlruaOy3dug==}
@@ -881,6 +990,9 @@ packages:
       babel-plugin-macros:
         optional: true
 
+  tiny-invariant@1.3.3:
+    resolution: {integrity: sha512-+FbBPE1o9QAYvviau/qC5SE3caw21q3xkvWKBtja5vgqOWIHHJ3ioaq1VPfn/Szqctz2bU/oYeKd9/z5BL+PVg==}
+
   toidentifier@1.0.1:
     resolution: {integrity: sha512-o5sSPKEkg/DIQNmH43V0/uerLrpzVedkUh8tGNvaeXpfpuwjKenlSox/2O/BTlZUtEe+JG7s5YhEz608PlAHRA==}
     engines: {node: '>=0.6'}
@@ -930,6 +1042,112 @@ packages:
     resolution: {integrity: sha512-gzUt/qt81nXsFGKIFcC3YnfEAx5NkunCfnDlvuBSSFS02bcXu4Lmea0AFIUwbLWxWPx3d9p8S5QoaujKcNQxcQ==}
 
 snapshots:
+
+  '@atlaskit/atlassian-context@1.1.1(react@19.2.8)':
+    dependencies:
+      '@babel/runtime': 7.29.7
+      react: 19.2.8
+
+  '@atlaskit/css-reset@8.3.1(react@19.2.8)':
+    dependencies:
+      '@atlaskit/tokens': 16.8.0(react@19.2.8)
+      '@babel/runtime': 7.29.7
+      react: 19.2.8
+    transitivePeerDependencies:
+      - supports-color
+
+  '@atlaskit/ds-lib@8.0.0(react@19.2.8)':
+    dependencies:
+      '@babel/runtime': 7.29.7
+      bind-event-listener: 3.0.0
+      react: 19.2.8
+      tiny-invariant: 1.3.3
+
+  '@atlaskit/feature-gate-js-client@6.0.2(react@19.2.8)':
+    dependencies:
+      '@atlaskit/atlassian-context': 1.1.1(react@19.2.8)
+      '@babel/runtime': 7.29.7
+      '@statsig/client-core': 3.30.2
+      '@statsig/js-client': 3.30.2
+      eventemitter3: 4.0.7
+    transitivePeerDependencies:
+      - react
+
+  '@atlaskit/platform-feature-flags@2.1.1(react@19.2.8)':
+    dependencies:
+      '@atlaskit/feature-gate-js-client': 6.0.2(react@19.2.8)
+      '@babel/runtime': 7.29.7
+    transitivePeerDependencies:
+      - react
+
+  '@atlaskit/react-compiler-gating@0.2.3(react@19.2.8)':
+    dependencies:
+      '@atlaskit/feature-gate-js-client': 6.0.2(react@19.2.8)
+      '@babel/runtime': 7.29.7
+    transitivePeerDependencies:
+      - react
+
+  '@atlaskit/tokens@16.8.0(react@19.2.8)':
+    dependencies:
+      '@atlaskit/ds-lib': 8.0.0(react@19.2.8)
+      '@atlaskit/platform-feature-flags': 2.1.1(react@19.2.8)
+      '@atlaskit/react-compiler-gating': 0.2.3(react@19.2.8)
+      '@babel/runtime': 7.29.7
+      '@babel/traverse': 7.29.8
+      '@babel/types': 7.29.8
+      bind-event-listener: 3.0.0
+      react: 19.2.8
+    transitivePeerDependencies:
+      - supports-color
+
+  '@babel/code-frame@7.29.7':
+    dependencies:
+      '@babel/helper-validator-identifier': 7.29.7
+      js-tokens: 4.0.0
+      picocolors: 1.1.1
+
+  '@babel/generator@7.29.8':
+    dependencies:
+      '@babel/parser': 7.29.8
+      '@babel/types': 7.29.8
+      '@jridgewell/gen-mapping': 0.3.13
+      '@jridgewell/trace-mapping': 0.3.31
+      jsesc: 3.1.0
+
+  '@babel/helper-globals@7.29.7': {}
+
+  '@babel/helper-string-parser@7.29.7': {}
+
+  '@babel/helper-validator-identifier@7.29.7': {}
+
+  '@babel/parser@7.29.8':
+    dependencies:
+      '@babel/types': 7.29.8
+
+  '@babel/runtime@7.29.7': {}
+
+  '@babel/template@7.29.7':
+    dependencies:
+      '@babel/code-frame': 7.29.7
+      '@babel/parser': 7.29.8
+      '@babel/types': 7.29.8
+
+  '@babel/traverse@7.29.8':
+    dependencies:
+      '@babel/code-frame': 7.29.7
+      '@babel/generator': 7.29.8
+      '@babel/helper-globals': 7.29.7
+      '@babel/parser': 7.29.8
+      '@babel/template': 7.29.7
+      '@babel/types': 7.29.8
+      debug: 4.4.3
+    transitivePeerDependencies:
+      - supports-color
+
+  '@babel/types@7.29.8':
+    dependencies:
+      '@babel/helper-string-parser': 7.29.7
+      '@babel/helper-validator-identifier': 7.29.7
 
   '@emnapi/runtime@1.11.3':
     dependencies:
@@ -1125,6 +1343,20 @@ snapshots:
   '@img/sharp-win32-x64@0.35.3':
     optional: true
 
+  '@jridgewell/gen-mapping@0.3.13':
+    dependencies:
+      '@jridgewell/sourcemap-codec': 1.5.5
+      '@jridgewell/trace-mapping': 0.3.31
+
+  '@jridgewell/resolve-uri@3.1.2': {}
+
+  '@jridgewell/sourcemap-codec@1.5.5': {}
+
+  '@jridgewell/trace-mapping@0.3.31':
+    dependencies:
+      '@jridgewell/resolve-uri': 3.1.2
+      '@jridgewell/sourcemap-codec': 1.5.5
+
   '@modelcontextprotocol/sdk@1.30.0(zod@3.25.76)':
     dependencies:
       '@hono/node-server': 2.1.1(hono@4.13.3)
@@ -1173,6 +1405,12 @@ snapshots:
   '@next/swc-win32-x64-msvc@16.3.2':
     optional: true
 
+  '@statsig/client-core@3.30.2': {}
+
+  '@statsig/js-client@3.30.2':
+    dependencies:
+      '@statsig/client-core': 3.30.2
+
   '@swc/helpers@0.5.23':
     dependencies:
       tslib: 2.8.1
@@ -1206,6 +1444,8 @@ snapshots:
       require-from-string: 2.0.2
 
   baseline-browser-mapping@2.11.17: {}
+
+  bind-event-listener@3.0.0: {}
 
   body-parser@2.3.0:
     dependencies:
@@ -1319,6 +1559,8 @@ snapshots:
   escape-html@1.0.3: {}
 
   etag@1.8.1: {}
+
+  eventemitter3@4.0.7: {}
 
   eventsource-parser@3.1.1: {}
 
@@ -1442,6 +1684,10 @@ snapshots:
   isexe@2.0.0: {}
 
   jose@6.2.10: {}
+
+  js-tokens@4.0.0: {}
+
+  jsesc@3.1.0: {}
 
   json-schema-traverse@1.0.0: {}
 
@@ -1668,6 +1914,8 @@ snapshots:
     dependencies:
       client-only: 0.0.1
       react: 19.2.8
+
+  tiny-invariant@1.3.3: {}
 
   toidentifier@1.0.1: {}
 

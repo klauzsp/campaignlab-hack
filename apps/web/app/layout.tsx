@@ -1,15 +1,18 @@
 import type { Metadata } from "next";
+import "@atlaskit/css-reset";
 import "./globals.css";
+import { AtlassianTheme } from "../components/atlassian-theme";
 
 export const metadata: Metadata = {
-  title: "Civic Lens — Council intelligence for officers",
+  title: "Atlas — Council intelligence for officers",
   description: "Evidence-first research across UK council decisions, reports and minutes.",
+  icons: { icon: "/atlaslogo.png" },
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="en">
-      <body>{children}</body>
+      <body><AtlassianTheme />{children}</body>
     </html>
   );
 }

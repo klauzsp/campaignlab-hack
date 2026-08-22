@@ -101,6 +101,8 @@ export type Evidence = {
   score: number | null;
 };
 
+export type CouncilMatch = Council & { matchScore: number };
+
 export class PoterisError extends Error {
   constructor(message: string, public readonly status?: number) {
     super(message);
@@ -230,6 +232,71 @@ export class PoterisClient {
       per_page: input.perPage ?? 25,
     });
   }
+}
+
+function normalizedCouncilName(value: string) {
+  return value.toLowerCase().replace(/\b(city|borough|district|metropolitan|county|council|of|the)\b/g, " ").replace(/[^a-z0-9]+/g, " ").trim();
+}
+
+export async function findCouncils(client: PoterisClient, name: string, limit = 5): Promise<CouncilMatch[]> {
+  const firstPage = await client.listCouncils({ perPage: 100 });
+  const remainingPages = await Promise.all(
+    Array.from({ length: Math.ceil(firstPage.total / firstPage.per_page) - 1 }, (_, index) => client.listCouncils({ page: index + 2, perPage: 100 })),
+  );
+  const query = normalizedCouncilName(name);
+  const queryWords = new Set(query.split(" ").filter(Boolean));
+  return [firstPage, ...remainingPages]
+    .flatMap((page) => page.items)
+    .map((council) => {
+      const candidate = normalizedCouncilName(council.name ?? "");
+      const candidateWords = candidate.split(" ").filter(Boolean);
+      const overlap = candidateWords.filter((word) => queryWords.has(word)).length;
+      const matchScore = candidate && query
+        ? candidate === query
+          ? 100
+          : candidate.includes(query) || query.includes(candidate)
+            ? 80
+            : overlap * 20
+        : 0;
+      return { ...council, matchScore };
+    })
+    .filter((council) => council.matchScore > 0)
+    .sort((a, b) => b.matchScore - a.matchScore || (a.name ?? "").localeCompare(b.name ?? ""))
+    .slice(0, limit);
+}
+
+function searchVariants(issue: string, supplied: string[] = []) {
+  const base = toSearchPhrase(issue);
+  const words = base.split(/\s+/).filter(Boolean);
+  const singular = words.map((word) => word.length > 4 && word.endsWith("s") ? word.slice(0, -1) : word).join(" ");
+  const withoutMiddle = words.length === 3 ? `${words[0]} ${words[2]}` : "";
+  return [...new Set([...supplied, base, singular, withoutMiddle].map((value) => value.trim()).filter((value) => value.length >= 2))].slice(0, 5);
+}
+
+export async function compareCouncilEvidence(
+  client: PoterisClient,
+  input: { councilNames: string[]; issue: string; searchTerms?: string[]; perCouncil?: number },
+) {
+  const resolved = await Promise.all(input.councilNames.map(async (name) => ({ requestedName: name, matches: await findCouncils(client, name, 3) })));
+  const terms = searchVariants(input.issue, input.searchTerms);
+  const perCouncil = Math.min(input.perCouncil ?? 8, 15);
+  const councils = await Promise.all(resolved.map(async ({ requestedName, matches }) => {
+    const council = matches[0];
+    if (!council) return { requestedName, council: null, alternatives: [], totalMatches: 0, evidence: [] as Evidence[] };
+    const searches = await Promise.all(terms.map((query) => client.search({ query, councilId: council.id, size: perCouncil })));
+    const uniqueHits = new Map<string, SearchHit>();
+    searches.flatMap((result) => result.hits).forEach((hit) => uniqueHits.set(hit.id, hit));
+    const councilNames = new Map([[council.id, council.name ?? requestedName]]);
+    return {
+      requestedName,
+      council,
+      alternatives: matches.slice(1),
+      totalMatches: Math.max(0, ...searches.map((result) => result.total)),
+      searchedTerms: terms,
+      evidence: [...uniqueHits.values()].sort((a, b) => (b.score ?? 0) - (a.score ?? 0)).slice(0, perCouncil).map((hit) => toEvidence(hit, councilNames)),
+    };
+  }));
+  return { issue: input.issue, searchedTerms: terms, councils };
 }
 
 function textValue(value: unknown): string | null {
