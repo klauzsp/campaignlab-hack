@@ -35,6 +35,9 @@ importers:
       '@civic-lens/core':
         specifier: workspace:*
         version: link:../../packages/council-core
+      '@modelcontextprotocol/sdk':
+        specifier: ^1.17.3
+        version: 1.30.0(zod@3.25.76)
       next:
         specifier: ^16.1.0
         version: 16.3.2(@types/node@24.13.3)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)

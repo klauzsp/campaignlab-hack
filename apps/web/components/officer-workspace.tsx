@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import type { Council, Evidence } from "@civic-lens/core";
-import type { Analysis } from "../lib/agent";
+import type { AgentTrace, Analysis } from "../lib/agent";
 import { ArrowIcon, CheckIcon, ExternalIcon, FileIcon, LayersIcon, SearchIcon, SparkIcon } from "./icons";
 
 type Result = {
@@ -11,6 +11,7 @@ type Result = {
   evidence: Evidence[];
   analysis: Analysis;
   provider: string;
+  trace?: AgentTrace[];
   generatedAt: string;
 };
 
@@ -78,7 +79,7 @@ export function OfficerWorkspace() {
 
       {!result && !loading && <section className="how-it-works"><div><span>01</span><h3>Ask in plain English</h3><p>Describe the service challenge, policy question or local concern.</p></div><div><span>02</span><h3>Trace every claim</h3><p>Review passages from original council papers, with source links intact.</p></div><div><span>03</span><h3>Shape the briefing</h3><p>Turn comparable approaches into an officer-ready starting point.</p></div></section>}
 
-      {loading && <section className="loading-state"><div className="radar"><SparkIcon /></div><div><span>Searching council records</span><h2>Gathering comparable evidence…</h2><p>Reviewing minutes, committee papers and decisions across Poteris.</p></div></section>}
+      {loading && <section className="loading-state"><div className="radar"><SparkIcon /></div><div><span>Gemini agent working</span><h2>Selecting council research tools…</h2><p>The agent may search, inspect documents and refine its evidence before answering.</p></div></section>}
 
       {result && !loading && <section className="results">
         <div className="result-heading"><div><span className="kicker"><SparkIcon /> Research brief</span><h2>{result.analysis.headline}</h2><p>{result.analysis.summary}</p></div><aside><strong>{result.evidence.length}</strong><span>sources selected</span><small>{result.total.toLocaleString()} records matched</small></aside></div>
@@ -90,6 +91,7 @@ export function OfficerWorkspace() {
           </article>
 
           <aside className="side-column">
+            {result.trace && result.trace.length > 0 && <div className="trace-card"><div className="trace-heading"><SparkIcon /><div><small>Agent activity</small><h3>{result.trace.length} MCP tool call{result.trace.length === 1 ? "" : "s"}</h3></div></div><ol>{result.trace.map((step, index) => <li key={`${step.tool}-${index}`}><span>{index + 1}</span><div><strong>{step.label}</strong><small>{step.tool}</small></div><CheckIcon /></li>)}</ol></div>}
             <div className="note-card"><span className="section-number">02</span><h3>Officer considerations</h3><ul>{result.analysis.considerations.map((item) => <li key={item}><span>!</span>{item}</li>)}</ul></div>
             <div className="next-card"><span className="section-number">03</span><h3>Suggested next steps</h3><ul>{result.analysis.nextSteps.map((item) => <li key={item}><CheckIcon />{item}</li>)}</ul><button onClick={() => window.print()}>Create briefing note <ArrowIcon /></button></div>
           </aside>

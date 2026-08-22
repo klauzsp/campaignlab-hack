@@ -35,12 +35,16 @@ server.tool(
 
 server.tool(
   "get_document",
-  "Retrieve one Poteris document, optionally including its extracted full text.",
+  "Retrieve one Poteris document and its extracted text. Use after search when the excerpt is insufficient.",
   {
     documentId: z.number().int().positive(),
     includeText: z.boolean().default(true),
+    maxCharacters: z.number().int().min(1000).max(30000).default(12000),
   },
-  async ({ documentId, includeText }) => json(await client.getDocument(documentId, includeText)),
+  async ({ documentId, includeText, maxCharacters }) => {
+    const document = await client.getDocument(documentId, includeText);
+    return json({ ...document, text: document.text?.slice(0, maxCharacters), text_truncated: Boolean(document.text && document.text.length > maxCharacters) });
+  },
 );
 
 server.tool(
@@ -65,6 +69,44 @@ server.tool(
   },
   async ({ councilId, dateFrom, dateTo, keyOnly, limit }) =>
     json(await client.listDecisions({ councilId, dateFrom, dateTo, isKey: keyOnly, perPage: limit })),
+);
+
+server.tool(
+  "list_meetings",
+  "List council meetings. Use for questions about meeting dates, committees, agendas, or availability of minutes.",
+  {
+    councilId: z.number().int().positive().optional(),
+    committeeId: z.number().int().positive().optional(),
+    dateFrom: z.string().optional().describe("ISO date, YYYY-MM-DD"),
+    dateTo: z.string().optional().describe("ISO date, YYYY-MM-DD"),
+    hasMinutes: z.boolean().optional(),
+    limit: z.number().int().min(1).max(100).default(25),
+  },
+  async ({ councilId, committeeId, dateFrom, dateTo, hasMinutes, limit }) =>
+    json(await client.listMeetings({ councilId, committeeId, dateFrom, dateTo, hasMinutes, perPage: limit })),
+);
+
+server.tool(
+  "list_people",
+  "List people associated with councils. Use for questions about councillors, political parties, or council membership.",
+  {
+    councilId: z.number().int().positive().optional(),
+    councillorsOnly: z.boolean().optional(),
+    party: z.string().optional(),
+    limit: z.number().int().min(1).max(100).default(25),
+  },
+  async ({ councilId, councillorsOnly, party, limit }) =>
+    json(await client.listPeople({ councilId, isCouncillor: councillorsOnly, party, perPage: limit })),
+);
+
+server.tool(
+  "list_committees",
+  "List the committees belonging to a council. Resolve the council ID with list_councils first.",
+  {
+    councilId: z.number().int().positive(),
+    limit: z.number().int().min(1).max(100).default(50),
+  },
+  async ({ councilId, limit }) => json(await client.listCommittees(councilId, { perPage: limit })),
 );
 
 await server.connect(new StdioServerTransport());

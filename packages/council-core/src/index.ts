@@ -47,6 +47,33 @@ export type Decision = {
   topline: string | null;
 };
 
+export type Meeting = {
+  id: number;
+  council_id: number;
+  committee_id: number | null;
+  name: string | null;
+  url: string | null;
+  date: string | null;
+  topline: string | null;
+};
+
+export type Person = {
+  id: number;
+  council_id: number;
+  name?: string | null;
+  full_name?: string | null;
+  party?: string | null;
+  is_councillor?: boolean;
+  [key: string]: unknown;
+};
+
+export type Committee = {
+  id: number;
+  council_id?: number;
+  name?: string | null;
+  [key: string]: unknown;
+};
+
 export type SearchHit = {
   id: string;
   score: number | null;
@@ -135,6 +162,35 @@ export class PoterisClient {
 
   getDocument(id: number, includeText = true) {
     return this.get<DocumentDetail>(`/documents/${id}`, { include_text: includeText });
+  }
+
+  listMeetings(input: { councilId?: number; committeeId?: number; dateFrom?: string; dateTo?: string; hasMinutes?: boolean; page?: number; perPage?: number } = {}) {
+    return this.get<Page<Meeting>>("/meetings", {
+      council_id: input.councilId,
+      committee_id: input.committeeId,
+      date_from: input.dateFrom,
+      date_to: input.dateTo,
+      has_minutes: input.hasMinutes,
+      page: input.page ?? 1,
+      per_page: input.perPage ?? 25,
+    });
+  }
+
+  listPeople(input: { councilId?: number; isCouncillor?: boolean; party?: string; page?: number; perPage?: number } = {}) {
+    return this.get<Page<Person>>("/people", {
+      council_id: input.councilId,
+      is_councillor: input.isCouncillor,
+      party: input.party,
+      page: input.page ?? 1,
+      per_page: input.perPage ?? 25,
+    });
+  }
+
+  listCommittees(councilId: number, input: { page?: number; perPage?: number } = {}) {
+    return this.get<Page<Committee>>(`/councils/${councilId}/committees`, {
+      page: input.page ?? 1,
+      per_page: input.perPage ?? 25,
+    });
   }
 
   listDecisions(input: { councilId?: number; dateFrom?: string; dateTo?: string; isKey?: boolean; page?: number; perPage?: number } = {}) {

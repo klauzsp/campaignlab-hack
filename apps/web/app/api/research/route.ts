@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { PoterisClient, researchIssue } from "@civic-lens/core";
-import { analyse } from "../../../lib/agent";
+import { analyse, runGeminiMcpAgent } from "../../../lib/agent";
 
 export const runtime = "nodejs";
 
@@ -12,6 +12,10 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Ask a question between 2 and 500 characters." }, { status: 400 });
     }
     const councilId = typeof body.councilId === "number" && body.councilId > 0 ? body.councilId : undefined;
+    if (process.env.AI_PROVIDER?.toLowerCase() === "gemini") {
+      const result = await runGeminiMcpAgent(query, councilId);
+      return NextResponse.json({ query, ...result, generatedAt: new Date().toISOString() });
+    }
     const client = new PoterisClient({ baseUrl: process.env.POTERIS_API_URL, token: process.env.POTERIS_API_TOKEN });
     const research = await researchIssue(client, { query, councilId, limit: 10 });
     const result = await analyse(query, research.evidence);
