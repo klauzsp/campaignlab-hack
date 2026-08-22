@@ -45,7 +45,10 @@ function ResearchBrief({ result }: { result: Result }) {
         <span className="atlas-response-mark">
           <Image src="/atlaslogo.png" alt="" width={28} height={28} />
         </span>
-        <span><strong>Atlas</strong><small>Evidence brief</small></span>
+        <span>
+          <strong>Atlas</strong>
+          <small>Evidence brief</small>
+        </span>
       </div>
       <div className="brief-header">
         <div>
@@ -390,10 +393,8 @@ export function OfficerWorkspace() {
           </span>
           <strong>Atlas</strong>
           <span className="header-divider" />
-          <span className="header-context">Council intelligence</span>
         </div>
         <div className="header-actions">
-          <span className="connection-status"><i /> Live records</span>
           {hasThread && (
             <button
               type="button"
@@ -413,7 +414,6 @@ export function OfficerWorkspace() {
           <section className="research-intro" id="research">
             <div className="home-research-copy">
               <div className="intro-copy">
-                <span className="hero-kicker"><SparkIcon /> Evidence-led council research</span>
                 <h1>What would you like to investigate?</h1>
                 <p>
                   Ask about a service challenge, decision or policy. Atlas
