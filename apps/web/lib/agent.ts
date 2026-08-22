@@ -122,6 +122,7 @@ function toolLabel(name: string, args: Record<string, unknown>) {
     list_councils: "Resolved council information",
     find_council: "Resolved a council name",
     compare_councils: "Compared council evidence",
+    investigate_council_topic: "Investigated a council approach",
     list_decisions: "Reviewed formal decisions",
     list_meetings: "Reviewed council meetings",
     list_people: "Reviewed council members",
@@ -142,6 +143,7 @@ export async function runGeminiMcpAgent(
   question: string,
   councilId?: number,
   history: ConversationMessage[] = [],
+  priorEvidence: Evidence[] = [],
   options: { mode?: ResearchMode; onTrace?: (trace: AgentTrace) => void } = {},
 ): Promise<AgentResult> {
   const apiKey = process.env.GEMINI_API_KEY;
@@ -191,6 +193,7 @@ export async function runGeminiMcpAgent(
       if (!value || typeof value !== "object") return value;
       const data = value as Record<string, unknown>;
       if (typeof data.total === "number") total = Math.max(total, data.total);
+      if (typeof data.totalMatches === "number") total = Math.max(total, data.totalMatches);
       if (Array.isArray(data.evidence)) {
         return { ...data, evidence: data.evidence.map((item) => ({ ...(item as object), citationIndex: registerEvidence(item as Record<string, unknown>) })) };
       }
@@ -221,12 +224,17 @@ export async function runGeminiMcpAgent(
       return data;
     };
 
+    priorEvidence.slice(0, 20).forEach((item) => registerEvidence(item as Evidence & Record<string, unknown>));
+    const priorEvidenceContext = evidence.length
+      ? `\n\nPreviously verified sources from the immediately preceding answer remain available and may be cited in this answer:\n${evidence.map((item, index) => `[${index + 1}] ${item.councilName ?? "Council"} — ${item.title}: ${item.excerpt}`).join("\n")}`
+      : "";
+
     const conversationContext = history.length
       ? `\n\nEarlier conversation for resolving references such as “those” or “the second option”:\n${history.slice(-8).map((message) => `${message.role === "officer" ? "Officer" : "Atlas"}: ${message.content.slice(0, 6000)}`).join("\n")}`
       : "";
     const contents: GeminiContent[] = [{
       role: "user",
-      parts: [{ text: `Research the officer's latest question and answer it using council evidence: ${question}${councilId ? `\nThe officer selected council ID ${councilId}.` : ""}${conversationContext}` }],
+      parts: [{ text: `Research the officer's latest question and answer it using council evidence: ${question}${councilId ? `\nThe officer selected council ID ${councilId}.` : ""}${priorEvidenceContext}${conversationContext}` }],
     }];
 
     const callGemini = async (forceTool: boolean, disableTools = false) => {
@@ -234,7 +242,7 @@ export async function runGeminiMcpAgent(
         method: "POST",
         headers: { "Content-Type": "application/json", "x-goog-api-key": apiKey },
         body: JSON.stringify({
-          systemInstruction: { parts: [{ text: `You are Atlas, a careful UK local-government research agent. Use the supplied MCP tools to retrieve facts; never answer a factual council question from memory. Choose tools based on intent. For cross-council issues, start with research_issue and refine only when results are weak. When two or more councils are named for comparison, use compare_councils with multiple concise search-term variants. Never infer that evidence is absent from one exact search: resolve each named council, try broader council-specific terms, and compare the evidence that is available. A comparison answer must identify similarities, differences, evidence strength, and limitations; uneven evidence should produce a qualified comparison rather than a blanket no-evidence response. Distinguish proposals from adopted decisions and do not claim an approach worked unless evidence says so. Every factual approach must cite citationIndex values returned by tools. You are in ${mode.toUpperCase()} mode: ${mode === "quick" ? "prioritise a useful answer within three research rounds, make no more than two parallel calls at once, and open full documents only when excerpts cannot answer the question" : "research thoroughly and open strong source documents where useful"}. ${outputShape}` }] },
+          systemInstruction: { parts: [{ text: `You are Atlas, a careful UK local-government research agent. Use the supplied MCP tools and previously verified sources to retrieve facts; never answer a factual council question from memory. Choose tools based on intent. For cross-council issues, start with research_issue and refine only when results are weak. When two or more councils are named for comparison, use compare_councils with multiple concise search-term variants. For any question about one named council—especially whether an approach is sensible, effective, successful, or worth adopting—use investigate_council_topic with variants covering the intervention, the service problem, and measurable outcomes. Reuse and cite relevant previously verified sources; do not discard them merely because a fresh exact search is weak. Never infer that evidence is absent from one exact search: resolve the named council, try exact, broader, and outcome-oriented terms, then open the strongest document when effectiveness is at issue. After resolving a named council, scope any additional search_council_records call to that councilId unless the officer explicitly asks for wider comparators. An evaluative answer must give a direct, qualified judgement and separate (1) documented implementation, (2) documented outcomes, and (3) professional inference about likely benefits, risks, costs, and transferability. Use words such as “proven”, “caused”, “highly effective”, or “cost-saving” only when the evidence contains an appropriate causal evaluation or quantified financial result; otherwise say “the council reports”, “is associated with”, “appears promising”, or “likely”. Never invent implementation details, costs, savings, system integrations, or risks as documented facts; label general operational reasoning as professional inference. A lack of causal proof limits confidence but does not prevent a reasoned assessment. A comparison answer must identify similarities, differences, evidence strength, and limitations; uneven evidence should produce a qualified comparison rather than a blanket no-evidence response. Distinguish proposals from adopted decisions and do not claim an approach worked unless evidence says so. Every factual approach must cite citationIndex values returned by tools. You are in ${mode.toUpperCase()} mode: ${mode === "quick" ? "prioritise a useful answer within three research rounds, make no more than two parallel calls at once, and open full documents when assessing effectiveness" : "research thoroughly and open strong source documents where useful"}. ${outputShape}` }] },
           contents,
           ...(disableTools ? {} : {
             tools: [{ functionDeclarations }],
@@ -257,6 +265,8 @@ export async function runGeminiMcpAgent(
         args.limit = Math.min(typeof args.limit === "number" ? args.limit : 8, 8);
       } else if (name === "compare_councils") {
         args.perCouncil = Math.min(typeof args.perCouncil === "number" ? args.perCouncil : 8, 8);
+      } else if (name === "investigate_council_topic") {
+        args.limit = Math.min(typeof args.limit === "number" ? args.limit : 10, 10);
       } else if (name.startsWith("list_")) {
         args.limit = Math.min(typeof args.limit === "number" ? args.limit : 15, 15);
       } else if (name === "get_document") {

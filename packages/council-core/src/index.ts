@@ -299,6 +299,31 @@ export async function compareCouncilEvidence(
   return { issue: input.issue, searchedTerms: terms, councils };
 }
 
+export async function investigateCouncilTopic(
+  client: PoterisClient,
+  input: { councilName: string; topic: string; searchTerms?: string[]; limit?: number },
+) {
+  const matches = await findCouncils(client, input.councilName, 3);
+  const council = matches[0];
+  const terms = searchVariants(input.topic, input.searchTerms);
+  const limit = Math.min(input.limit ?? 10, 20);
+  if (!council) {
+    return { requestedName: input.councilName, council: null, alternatives: [], totalMatches: 0, searchedTerms: terms, evidence: [] as Evidence[] };
+  }
+  const searches = await Promise.all(terms.map((query) => client.search({ query, councilId: council.id, size: limit })));
+  const uniqueHits = new Map<string, SearchHit>();
+  searches.flatMap((result) => result.hits).forEach((hit) => uniqueHits.set(hit.id, hit));
+  const councilNames = new Map([[council.id, council.name ?? input.councilName]]);
+  return {
+    requestedName: input.councilName,
+    council,
+    alternatives: matches.slice(1),
+    totalMatches: Math.max(0, ...searches.map((result) => result.total)),
+    searchedTerms: terms,
+    evidence: [...uniqueHits.values()].sort((a, b) => (b.score ?? 0) - (a.score ?? 0)).slice(0, limit).map((hit) => toEvidence(hit, councilNames)),
+  };
+}
+
 function textValue(value: unknown): string | null {
   return typeof value === "string" && value.trim() ? value.trim() : null;
 }

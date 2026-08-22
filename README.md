@@ -14,7 +14,7 @@ Open `http://localhost:3000`. Next.js loads provider configuration from `apps/we
 
 ## MCP server
 
-The stdio MCP server exposes `research_issue`, `search_council_records`, `get_document`, `list_councils`, `find_council`, `compare_councils`, `list_decisions`, `list_meetings`, `list_people`, and `list_committees`. Council comparisons resolve every named authority against the full directory and search several issue-wording variants before the agent draws a conclusion.
+The stdio MCP server exposes `research_issue`, `search_council_records`, `get_document`, `list_councils`, `find_council`, `compare_councils`, `investigate_council_topic`, `list_decisions`, `list_meetings`, `list_people`, and `list_committees`. Council comparisons and single-council investigations resolve named authorities against the full directory and search several issue-wording variants before the agent draws a conclusion.
 
 ```bash
 pnpm mcp

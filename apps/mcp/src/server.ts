@@ -1,6 +1,6 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
-import { compareCouncilEvidence, findCouncils, PoterisClient, researchIssue } from "@civic-lens/core";
+import { compareCouncilEvidence, findCouncils, investigateCouncilTopic, PoterisClient, researchIssue } from "@civic-lens/core";
 import { z } from "zod";
 
 const client = new PoterisClient({
@@ -78,6 +78,19 @@ server.tool(
   },
   async ({ councilNames, issue, searchTerms, perCouncil }) =>
     json(await compareCouncilEvidence(client, { councilNames, issue, searchTerms, perCouncil })),
+);
+
+server.tool(
+  "investigate_council_topic",
+  "Build a robust evidence pack about any topic, intervention, or claimed outcome at one named council. Resolves the council against the complete directory and searches several terminology variants. Use for single-council factual, evaluative, effectiveness, and follow-up questions.",
+  {
+    councilName: z.string().min(2),
+    topic: z.string().min(2).describe("The intervention or issue to investigate, without the council name"),
+    searchTerms: z.array(z.string().min(2)).min(1).max(6).optional().describe("Concise variants covering the intervention, service issue, and outcome measure"),
+    limit: z.number().int().min(3).max(20).default(10),
+  },
+  async ({ councilName, topic, searchTerms, limit }) =>
+    json(await investigateCouncilTopic(client, { councilName, topic, searchTerms, limit })),
 );
 
 server.tool(
