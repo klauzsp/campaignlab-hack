@@ -12,7 +12,7 @@ import {
   SearchIcon,
   SparkIcon,
 } from "./icons";
-import { UkDiscoveryMap } from "./uk-discovery-map";
+import { UkDiscoveryMap, type RegionalResearchRequest } from "./uk-discovery-map";
 
 type Result = {
   query: string;
@@ -26,13 +26,22 @@ type Result = {
 };
 
 type Turn = { question: string; result: Result };
-type BriefTab = "summary" | "sources" | "activity";
+type BriefTab = "summary" | "sources";
 
 const examples = [
   "Missed bin collections",
   "Adult social care recruitment",
   "High street vacancy rates",
 ];
+
+function researchStatus(trace: AgentTrace[]) {
+  const latest = trace.at(-1)?.tool ?? "";
+  if (!latest) return "Planning your research";
+  if (latest === "get_document") return "Reading source documents";
+  if (latest === "compare_councils" || latest === "explore_region") return "Comparing council records";
+  if (trace.length >= 4) return "Reviewing the evidence";
+  return "Scanning council records";
+}
 
 function ResearchBrief({ result }: { result: Result }) {
   const [activeTab, setActiveTab] = useState<BriefTab>("summary");
@@ -75,14 +84,6 @@ function ResearchBrief({ result }: { result: Result }) {
           onClick={() => setActiveTab("sources")}
         >
           Sources <span>{result.evidence.length}</span>
-        </button>
-        <button
-          role="tab"
-          aria-selected={activeTab === "activity"}
-          className={activeTab === "activity" ? "active" : ""}
-          onClick={() => setActiveTab("activity")}
-        >
-          Agent activity <span>{result.trace?.length ?? 0}</span>
         </button>
       </div>
       {activeTab === "summary" && (
@@ -178,26 +179,6 @@ function ResearchBrief({ result }: { result: Result }) {
           </div>
         </section>
       )}
-      {activeTab === "activity" && (
-        <section className="content-panel tab-panel">
-          <div className="panel-heading">
-            <h2>Agent activity</h2>
-            <p>The MCP tools selected by Gemini for this answer.</p>
-          </div>
-          <ol className="activity-list">
-            {result.trace?.map((step, index) => (
-              <li key={`${step.tool}-${index}`}>
-                <span>{index + 1}</span>
-                <div>
-                  <strong>{step.label}</strong>
-                  <code>{step.tool}</code>
-                </div>
-                <CheckIcon />
-              </li>
-            ))}
-          </ol>
-        </section>
-      )}
     </article>
   );
 }
@@ -232,7 +213,7 @@ export function OfficerWorkspace() {
       threadEnd.current?.scrollIntoView({ behavior: "smooth", block: "end" });
   }, [hasThread, loading, turns.length, liveTrace.length]);
 
-  async function runResearch(nextQuestion: string) {
+  async function runResearch(nextQuestion: string, regionalRequest?: RegionalResearchRequest) {
     const cleanedQuestion = nextQuestion.trim();
     if (cleanedQuestion.length < 2) return;
     setLoading(true);
@@ -272,6 +253,9 @@ export function OfficerWorkspace() {
           priorEvidence,
           mode: researchMode,
           stream: true,
+          regionalRequest: regionalRequest
+            ? { region: regionalRequest.region, councilNames: regionalRequest.councils }
+            : undefined,
         }),
       });
       if (!response.ok) {
@@ -449,9 +433,9 @@ export function OfficerWorkspace() {
               </div>
             </div>
             <UkDiscoveryMap
-              onExplore={(regionalQuestion) => {
-                setQuery(regionalQuestion);
-                void runResearch(regionalQuestion);
+              onExplore={(regionalRequest) => {
+                setQuery(regionalRequest.question);
+                void runResearch(regionalRequest.question, regionalRequest);
               }}
               disabled={loading}
             />
@@ -470,17 +454,11 @@ export function OfficerWorkspace() {
               <p>{pendingQuestion}</p>
             </div>
             <div className="loading-panel">
-              <div className="rovo-icon">
-                <SparkIcon />
-              </div>
+              <span className="spinner dark" />
               <div>
-                <span>{researchMode} research in progress</span>
-                <h2>{liveTrace.at(-1)?.label ?? "Planning the research…"}</h2>
-                <p>
-                  {liveTrace.length
-                    ? `${liveTrace.length} MCP tool call${liveTrace.length === 1 ? "" : "s"} started`
-                    : "Choosing the most relevant council data tools"}
-                </p>
+                <span>Research in progress</span>
+                <h2>{researchStatus(liveTrace)}</h2>
+                <p>Checking reports, minutes and decisions</p>
               </div>
             </div>
           </section>
@@ -508,13 +486,8 @@ export function OfficerWorkspace() {
                 <div className="inline-progress" role="status">
                   <span className="spinner dark" />
                   <div>
-                    <strong>
-                      {liveTrace.at(-1)?.label ?? "Planning your follow-up…"}
-                    </strong>
-                    <span>
-                      {researchMode} mode · {liveTrace.length} tool call
-                      {liveTrace.length === 1 ? "" : "s"}
-                    </span>
+                    <strong>{researchStatus(liveTrace)}</strong>
+                    <span>Checking council evidence for your follow-up</span>
                   </div>
                 </div>
               </div>

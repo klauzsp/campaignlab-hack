@@ -6,13 +6,25 @@ export const runtime = "nodejs";
 
 export async function POST(request: Request) {
   try {
-    const body = (await request.json()) as { query?: unknown; councilId?: unknown; history?: unknown; priorEvidence?: unknown; mode?: unknown; stream?: unknown };
+    const body = (await request.json()) as { query?: unknown; councilId?: unknown; history?: unknown; priorEvidence?: unknown; mode?: unknown; stream?: unknown; regionalRequest?: unknown };
     const query = typeof body.query === "string" ? body.query.trim() : "";
     if (query.length < 2 || query.length > 500) {
       return NextResponse.json({ error: "Ask a question between 2 and 500 characters." }, { status: 400 });
     }
     const councilId = typeof body.councilId === "number" && body.councilId > 0 ? body.councilId : undefined;
     const mode: ResearchMode = body.mode === "deep" ? "deep" : "quick";
+    const regionalRequest = (() => {
+      if (!body.regionalRequest || typeof body.regionalRequest !== "object") return undefined;
+      const candidate = body.regionalRequest as { region?: unknown; councilNames?: unknown };
+      if (typeof candidate.region !== "string" || candidate.region.trim().length < 2 || candidate.region.length > 100) return undefined;
+      if (!Array.isArray(candidate.councilNames)) return undefined;
+      const councilNames = candidate.councilNames
+        .filter((name): name is string => typeof name === "string" && name.trim().length >= 2 && name.length <= 100)
+        .map((name) => name.trim())
+        .slice(0, 6);
+      if (councilNames.length < 2) return undefined;
+      return { region: candidate.region.trim(), councilNames };
+    })();
     const history: ConversationMessage[] = Array.isArray(body.history)
       ? body.history.slice(-8).flatMap((item) => {
           if (!item || typeof item !== "object") return [];
@@ -49,6 +61,7 @@ export async function POST(request: Request) {
             send({ type: "started", mode });
             void runGeminiMcpAgent(query, councilId, history, priorEvidence, {
               mode,
+              regionalRequest,
               onTrace: (trace) => send({ type: "activity", trace }),
             }).then((result) => {
               send({ type: "complete", data: { query, ...result, generatedAt: new Date().toISOString() } });
@@ -66,7 +79,7 @@ export async function POST(request: Request) {
           },
         });
       }
-      const result = await runGeminiMcpAgent(query, councilId, history, priorEvidence, { mode });
+      const result = await runGeminiMcpAgent(query, councilId, history, priorEvidence, { mode, regionalRequest });
       return NextResponse.json({ query, ...result, generatedAt: new Date().toISOString() });
     }
     const client = new PoterisClient({ baseUrl: process.env.POTERIS_API_URL, token: process.env.POTERIS_API_TOKEN });

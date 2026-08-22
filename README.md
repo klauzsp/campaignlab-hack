@@ -1,8 +1,14 @@
 # Atlas
 
-An evidence-first research workspace for UK council officers. Atlas connects a Gemini research agent to the live [Poteris Council Gateway API](https://councilgateway.poteris.co.uk/council-api/docs) through MCP tools, keeps source links attached to every finding, and turns the evidence into a concise briefing.
+Atlas is an evidence-first research assistant for UK council officers. Officers can investigate service issues, compare councils, explore regions, and ask follow-up questions. Atlas retrieves council records through the [Poteris Council Gateway](https://councilgateway.poteris.co.uk/council-api/docs) and uses Gemini to turn the evidence into a cited briefing.
 
-## Quick start
+## Workflow
+
+![Atlas research workflow](diagram.png)
+
+Map selections deterministically run `explore_region`; typed questions allow the agent to choose the appropriate MCP tools. Follow-ups include conversation context and previously verified evidence.
+
+## Run locally
 
 ```bash
 pnpm install
@@ -10,47 +16,11 @@ cp .env.example apps/web/.env.local
 pnpm dev
 ```
 
-Open `http://localhost:3000`. Next.js loads provider configuration from `apps/web/.env.local`. No AI key is required to search live council evidence. Add `AI_PROVIDER=gemini` and `GEMINI_API_KEY`, or `AI_PROVIDER=openai` and `OPENAI_API_KEY`, to enable generated analysis. Keep real API keys in `.env.local`; never put them in `.env.example`.
-
-## MCP server
-
-The stdio MCP server exposes `research_issue`, `search_council_records`, `get_document`, `list_councils`, `find_council`, `compare_councils`, `investigate_council_topic`, `explore_region`, `list_decisions`, `list_meetings`, `list_people`, and `list_committees`. Council comparisons and single-council investigations resolve named authorities against the full directory and search several issue-wording variants before the agent draws a conclusion. Regional discovery scans recent decisions and minuted meetings from a clearly labelled representative set of councils.
+Add your `GEMINI_API_KEY` to `apps/web/.env.local`, then open [http://localhost:3000](http://localhost:3000).
 
 ```bash
-pnpm mcp
+pnpm typecheck
+pnpm build
 ```
 
-Example client configuration after `pnpm install`:
-
-```json
-{
-  "mcpServers": {
-    "atlas": {
-      "command": "pnpm",
-      "args": ["--dir", "/absolute/path/to/council", "mcp"],
-      "env": {
-        "POTERIS_API_URL": "https://councilgateway.poteris.co.uk/council-api"
-      }
-    }
-  }
-}
-```
-
-## Architecture
-
-- `packages/council-core`: typed Poteris client and evidence normalization
-- `apps/mcp`: model-neutral MCP tools over that client
-- `apps/web`: Next.js officer workspace, MCP client, and Gemini/OpenAI adapters
-
-The web interface uses the official Atlassian CSS reset and design-token themes. Its information architecture follows an Atlassian-style page header and tabbed workspace: the primary Summary stays focused, while Sources and Agent activity are available on demand.
-
-For Gemini, the Next.js backend starts an MCP client, gives Gemini the server's live tool schemas, executes Gemini's selected tools, and returns results for further tool-selection rounds. The UI shows the completed MCP call trace so an agent response is visibly distinct from evidence-only fallback output. Follow-up questions carry the current research thread into a fresh evidence-verification loop, allowing references such as “those approaches” while avoiding unsupported answers from chat memory alone.
-
-The workspace offers two research depths:
-
-- **Quick** (default): up to three model/tool rounds, smaller evidence payloads, and limited full-document retrieval.
-- **Deep**: up to five rounds and broader document inspection for difficult or high-stakes questions.
-
-Independent MCP calls run in parallel, the local MCP connection is reused while the Next.js process is alive, and safe Poteris GET responses use short in-memory caches. The research route streams newline-delimited activity events so the interface can show each selected tool before the final briefing is ready.
-
-The local web agent uses MCP over stdio. For serverless deployment, host the MCP server with Streamable HTTP and point the web-side MCP client at that endpoint instead of spawning a local process.
+Built with TypeScript, Next.js, pnpm, Gemini, MCP, Atlassian design tokens, and the Poteris Council Gateway.

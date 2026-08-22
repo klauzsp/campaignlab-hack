@@ -4,8 +4,14 @@ import { useState } from "react";
 
 type Region = { name: string; shortName: string; x: number; y: number; councils: string[] };
 
+export type RegionalResearchRequest = {
+  question: string;
+  region: string;
+  councils: string[];
+};
+
 const regions: Region[] = [
-  { name: "Scotland", shortName: "Scotland", x: 340, y: 460, councils: ["Glasgow", "Edinburgh", "Aberdeen"] },
+  { name: "Scotland", shortName: "Scotland", x: 340, y: 460, councils: ["Aberdeen City", "City of Edinburgh", "Aberdeenshire"] },
   { name: "North East England", shortName: "North East", x: 435, y: 602, councils: ["Newcastle upon Tyne", "Sunderland", "Durham"] },
   { name: "North West England", shortName: "North West", x: 370, y: 740, councils: ["Manchester", "Liverpool", "Lancashire"] },
   { name: "Yorkshire and the Humber", shortName: "Yorkshire", x: 439, y: 720, councils: ["Leeds", "Sheffield", "York"] },
@@ -22,9 +28,13 @@ function questionFor(region: Region) {
   return `Give me a representative briefing on recent council priorities, service pressures and policy activity across ${region.name}. Use recent decisions and minuted meetings from ${region.councils.join(", ")} as examples, and distinguish formal decisions from discussion.`;
 }
 
-export function UkDiscoveryMap({ onExplore, disabled = false }: { onExplore: (question: string) => void; disabled?: boolean }) {
+export function UkDiscoveryMap({ onExplore, disabled = false }: { onExplore: (request: RegionalResearchRequest) => void; disabled?: boolean }) {
   const [selected, setSelected] = useState(regions[8]);
-  const launch = (region: Region) => { if (!disabled) onExplore(questionFor(region)); };
+  const launch = (region: Region) => {
+    if (!disabled) {
+      onExplore({ question: questionFor(region), region: region.name, councils: region.councils });
+    }
+  };
 
   return <section className="uk-discovery" aria-label="Explore council activity by UK region">
     <div className="map-stage">

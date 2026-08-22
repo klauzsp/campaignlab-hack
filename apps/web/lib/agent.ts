@@ -21,6 +21,11 @@ export type AgentTrace = {
 
 export type ResearchMode = "quick" | "deep";
 
+export type RegionalResearchRequest = {
+  region: string;
+  councilNames: string[];
+};
+
 export type AgentResult = {
   analysis: Analysis;
   evidence: Evidence[];
@@ -97,12 +102,25 @@ async function createMcpConnection(): Promise<McpConnection> {
   return { client, tools: listed.tools as McpTool[] };
 }
 
-async function getMcpConnection() {
+async function getMcpConnection(requiredTool?: string) {
   globalMcp.atlasMcp ??= createMcpConnection().catch((error) => {
     globalMcp.atlasMcp = undefined;
     throw error;
   });
-  return globalMcp.atlasMcp;
+  let connection = await globalMcp.atlasMcp;
+  if (requiredTool && !connection.tools.some((tool) => tool.name === requiredTool)) {
+    globalMcp.atlasMcp = undefined;
+    await connection.client.close().catch(() => undefined);
+    globalMcp.atlasMcp = createMcpConnection().catch((error) => {
+      globalMcp.atlasMcp = undefined;
+      throw error;
+    });
+    connection = await globalMcp.atlasMcp;
+    if (!connection.tools.some((tool) => tool.name === requiredTool)) {
+      throw new Error(`The Atlas MCP server does not expose the required ${requiredTool} tool.`);
+    }
+  }
+  return connection;
 }
 
 function cleanSchema(value: unknown): unknown {
@@ -147,14 +165,14 @@ export async function runGeminiMcpAgent(
   councilId?: number,
   history: ConversationMessage[] = [],
   priorEvidence: Evidence[] = [],
-  options: { mode?: ResearchMode; onTrace?: (trace: AgentTrace) => void } = {},
+  options: { mode?: ResearchMode; regionalRequest?: RegionalResearchRequest; onTrace?: (trace: AgentTrace) => void } = {},
 ): Promise<AgentResult> {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) throw new Error("GEMINI_API_KEY is not configured for the web app.");
   const mode = options.mode ?? "quick";
   const maxRounds = mode === "quick" ? 3 : 5;
   const maxToolCalls = mode === "quick" ? 6 : 14;
-  const { client: mcp, tools: mcpTools } = await getMcpConnection();
+  const { client: mcp, tools: mcpTools } = await getMcpConnection(options.regionalRequest ? "explore_region" : undefined);
     const functionDeclarations = mcpTools.map((tool) => ({
       name: tool.name,
       description: tool.description,
@@ -198,6 +216,7 @@ export async function runGeminiMcpAgent(
       if (typeof data.total === "number") total = Math.max(total, data.total);
       if (typeof data.totalMatches === "number") total = Math.max(total, data.totalMatches);
       if (Array.isArray(data.evidence)) {
+        total = Math.max(total, data.evidence.length);
         return { ...data, evidence: data.evidence.map((item) => ({ ...(item as object), citationIndex: registerEvidence(item as Record<string, unknown>) })) };
       }
       if (Array.isArray(data.councils)) {
@@ -227,9 +246,34 @@ export async function runGeminiMcpAgent(
       return data;
     };
 
-    priorEvidence.slice(0, 20).forEach((item) => registerEvidence(item as Evidence & Record<string, unknown>));
-    const priorEvidenceContext = evidence.length
-      ? `\n\nPreviously verified sources from the immediately preceding answer remain available and may be cited in this answer:\n${evidence.map((item, index) => `[${index + 1}] ${item.councilName ?? "Council"} — ${item.title}: ${item.excerpt}`).join("\n")}`
+    let regionalEvidenceContext = "";
+    if (options.regionalRequest) {
+      const step = { tool: "explore_region", label: "Scanned recent regional activity", round: 1 };
+      trace.push(step);
+      options.onTrace?.(step);
+      toolCallCount += 1;
+      const result = await mcp.callTool({
+        name: "explore_region",
+        arguments: {
+          region: options.regionalRequest.region,
+          councilNames: options.regionalRequest.councilNames,
+          perCouncil: mode === "quick" ? 4 : 6,
+        },
+      });
+      if (result.isError) throw new Error(`MCP tool explore_region failed: ${textFromMcpResult(result)}`);
+      const raw = textFromMcpResult(result);
+      let parsed: unknown = raw;
+      try { parsed = JSON.parse(raw); } catch { /* Preserve non-JSON tool output. */ }
+      const prepared = prepareResult(parsed);
+      regionalEvidenceContext = `\n\nA regional MCP scan has already been completed for this map request. Analyse this verified result and cite its citationIndex values. Do not replace it with a generic full-text search:\n${JSON.stringify(prepared)}`;
+    }
+
+    const priorEvidenceEntries = priorEvidence.slice(0, 20).map((item) => ({
+      item,
+      citationIndex: registerEvidence(item as Evidence & Record<string, unknown>),
+    }));
+    const priorEvidenceContext = priorEvidenceEntries.length
+      ? `\n\nPreviously verified sources from the immediately preceding answer remain available and may be cited in this answer:\n${priorEvidenceEntries.map(({ item, citationIndex }) => `[${citationIndex}] ${item.councilName ?? "Council"} — ${item.title}: ${item.excerpt}`).join("\n")}`
       : "";
 
     const conversationContext = history.length
@@ -237,7 +281,7 @@ export async function runGeminiMcpAgent(
       : "";
     const contents: GeminiContent[] = [{
       role: "user",
-      parts: [{ text: `Research the officer's latest question and answer it using council evidence: ${question}\n${regionalGuidance}${councilId ? `\nThe officer selected council ID ${councilId}.` : ""}${priorEvidenceContext}${conversationContext}` }],
+      parts: [{ text: `Research the officer's latest question and answer it using council evidence: ${question}\n${regionalGuidance}${councilId ? `\nThe officer selected council ID ${councilId}.` : ""}${regionalEvidenceContext}${priorEvidenceContext}${conversationContext}` }],
     }];
 
     const callGemini = async (forceTool: boolean, disableTools = false) => {
@@ -281,7 +325,7 @@ export async function runGeminiMcpAgent(
     };
 
     for (let round = 1; round <= maxRounds; round += 1) {
-      const response = await callGemini(round === 1);
+      const response = await callGemini(round === 1 && !options.regionalRequest);
       const modelContent = response.candidates?.[0]?.content;
       if (!modelContent?.parts?.length) throw new Error("Gemini agent returned no response.");
       contents.push(modelContent);
