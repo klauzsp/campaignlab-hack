@@ -1,0 +1,11 @@
+{
+  "name": "civic-lens",
+  "private": true,
+  "packageManager": "pnpm@10.11.0",
+  "scripts": {
+    "dev": "pnpm --filter @civic-lens/web dev",
+    "build": "pnpm -r build",
+    "typecheck": "pnpm -r typecheck",
+    "mcp": "pnpm --filter @civic-lens/mcp start"
+  }
+}
